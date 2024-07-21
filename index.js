@@ -6,6 +6,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3000;
+const multer = require('multer');
+const path = require('path');
+
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -18,6 +21,34 @@ const db = mysql.createConnection({
     database: '2Good2Waste'
 });
 
+// Multer setup for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, path.join(__dirname, 'uploads')); // Ensure 'uploads' directory exists
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage });
+
+const fs = require('fs');
+
+
+// Serve user profile images
+app.get('/images/:filename', (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, 'uploads', filename); // Adjust the path if needed
+
+    fs.stat(filePath, (err, stats) => {
+        if (err || !stats.isFile()) {
+            return res.status(404).json({ code: 3, message: 'Image not found' });
+        }
+
+        res.sendFile(filePath);
+    });
+});
 db.connect(err => {
     if (err) throw err;
     console.log('MySQL Connected...');
@@ -96,9 +127,77 @@ app.post('/login', async (req, res) => {
     });
 });
 
+// Route to check if user is still logged in by token check
+app.get('/checkLogin', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+
+    const sql = 'SELECT id, username, name, email, phone_number, profile_image, country_id, created_at, updated_at FROM users WHERE id = ?';
+
+    db.query(sql, [userId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json({ code: 2, message: 'Internal server error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ code: 3, message: 'User not found' });
+        }
+
+        res.status(200).json({ code: 1, message: 'User is logged in', user: results[0] });
+    });
+});
+
+// Route to get user by ID
+app.get('/getUserById/:id', (req, res) => {
+    const userId = req.params.id;
+
+    if (!userId) {
+        return res.status(400).json({ code: 2, message: 'User ID is required' });
+    }
+
+    const sql = 'SELECT id, username, name, email, phone_number, profile_image, country_id, created_at, updated_at FROM users WHERE id = ?';
+
+    db.query(sql, [userId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json({ code: 2, message: 'Internal server error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ code: 3, message: 'User not found' });
+        }
+
+        res.status(200).json({ code: 1, message: 'User found', user: results[0] });
+    });
+});
+
 // User registration route
-app.post('/register', async (req, res) => {
+// app.post('/register', async (req, res) => {
+//     const { username, name, email, phone_number, password, country_id } = req.body;
+
+//     if (!username || !name || !email || !phone_number || !password || !country_id) {
+//         return res.status(400).json({ code: 2, message: 'All fields are required' });
+//         console.log($(username), $(name), $(email), $(phone_number), $(password), $(country_id) );
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     const sql = 'INSERT INTO users (username, name, email, phone_number, password, country_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
+
+//     db.query(sql, [username, name, email, phone_number, hashedPassword, country_id], (err, result) => {
+//         if (err) {
+//             console.error('Database error:', err.message);
+//             return res.status(500).json({ code: 2, message: 'Internal server error' });
+//         }
+
+//         res.status(201).json({ code: 1, message: 'User registered successfully' });
+//     });
+// });
+
+// User registration route with image upload
+app.post('/register', upload.single('profile_image'), async (req, res) => {
     const { username, name, email, phone_number, password, country_id } = req.body;
+    const profileImage = req.file ? req.file.filename : null; // Get the uploaded file name
 
     if (!username || !name || !email || !phone_number || !password || !country_id) {
         return res.status(400).json({ code: 2, message: 'All fields are required' });
@@ -106,9 +205,9 @@ app.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const sql = 'INSERT INTO users (username, name, email, phone_number, password, country_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
+    const sql = 'INSERT INTO users (username, name, email, phone_number, password, country_id, profile_image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
 
-    db.query(sql, [username, name, email, phone_number, hashedPassword, country_id], (err, result) => {
+    db.query(sql, [username, name, email, phone_number, hashedPassword, country_id, profileImage], (err, result) => {
         if (err) {
             console.error('Database error:', err.message);
             return res.status(500).json({ code: 2, message: 'Internal server error' });
@@ -117,6 +216,49 @@ app.post('/register', async (req, res) => {
         res.status(201).json({ code: 1, message: 'User registered successfully' });
     });
 });
+
+
+// User edit route with image upload
+app.put('/editUser/:id', upload.single('profile_image'), async (req, res) => {
+    const userId = req.params.id;
+    const { name, email, phone_number, country_id, username, password } = req.body;
+    const profileImage = req.file ? req.file.filename : null; // Get the uploaded file name
+
+    // Validate required fields
+    if (!name || !email || !phone_number || !country_id || !username || !password) {
+        return res.status(400).json({ code: 2, message: 'All fields except profile_image are required' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const sql = 'UPDATE users SET name = ?, email = ?, phone_number = ?, profile_image = ?, country_id = ?, username = ?, password = ?, updated_at = NOW() WHERE id = ?';
+
+    db.query(sql, [name, email, phone_number, profileImage, country_id, username, hashedPassword, userId], (err, result) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json({ code: 2, message: 'Internal server error' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ code: 3, message: 'User not found' });
+        }
+
+        console.log('Updated user details:', {
+            id: userId,
+            username,
+            name,
+            email,
+            phone_number,
+            profile_image: profileImage,
+            country_id
+        });
+
+        res.status(200).json({ code: 1, message: 'User updated successfully' });
+    });
+});
+
+
 
 // Route to create a new coupon (accessible by admins only)
 app.post('/coupons', authenticateToken, (req, res) => {
