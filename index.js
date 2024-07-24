@@ -18,7 +18,8 @@ const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
+    database: process.env.DB_DATABASE,
+    port: port
 });
 
 // Multer setup for file uploads
@@ -35,7 +36,14 @@ const upload = multer({ storage });
 
 const fs = require('fs');
 
-
+// Connect to MySQL
+connection.connect(err => {
+    if (err) {
+        console.error('Error connecting to MySQL:', err.message);
+        return;
+    }
+    console.log('MySQL Connected...');
+});
 
 
 // Serve user profile images
