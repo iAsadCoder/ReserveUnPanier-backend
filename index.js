@@ -15,10 +15,10 @@ app.use(express.json());
 
 // MySQL connection
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: '2Good2Waste'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE
 });
 
 // Multer setup for file uploads
