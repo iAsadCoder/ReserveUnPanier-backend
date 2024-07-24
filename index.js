@@ -70,6 +70,10 @@ const createResponse = (code, message, data = null) => ({
     },
 });
 
+
+//This is new code
+
+
 // Middleware to authenticate token
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
