@@ -111,40 +111,40 @@ app.get('/', (req, res) => {
     res.json(createResponse(1, 'API is working'));
 });
 
-// Route to login and get a token
-app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    console.log('Secret Key:', process.env.ACCESS_TOKEN_SECRET);
-    // Validate input
-    if (!username || !password) {
-        return res.status(400).json(createResponse(2, 'Username and password are required'));
-    }
+ // Route to login and get a token
+// app.post('/login', async (req, res) => {
+//     const { username, password } = req.body;
+//     console.log('Secret Key:', process.env.ACCESS_TOKEN_SECRET);
+//     // Validate input
+//     if (!username || !password) {
+//         return res.status(400).json(createResponse(2, 'Username and password are required'));
+//     }
 
-    const sql = 'SELECT * FROM users WHERE username = ?';
+//     const sql = 'SELECT * FROM users WHERE username = ?';
 
-    // Execute query
-    db.query(sql, [username], async (err, results) => {
-        if (err) {
-            return res.status(500).json(createResponse(2, err.message));
-        }
+//     // Execute query
+//     db.query(sql, [username], async (err, results) => {
+//         if (err) {
+//             return res.status(500).json(createResponse(2, err.message));
+//         }
 
-        if (results.length === 0) {
-            return res.status(404).json(createResponse(3, 'User not found'));
-        }
+//         if (results.length === 0) {
+//             return res.status(404).json(createResponse(3, 'User not found'));
+//         }
 
-        // Verify password
-        const user = results[0];
-        const isMatch = await bcrypt.compare(password, user.password);
+//         // Verify password
+//         const user = results[0];
+//         const isMatch = await bcrypt.compare(password, user.password);
 
-        if (!isMatch) {
-            return res.status(401).json(createResponse(4, 'Invalid password'));
-        }
+//         if (!isMatch) {
+//             return res.status(401).json(createResponse(4, 'Invalid password'));
+//         }
 
-        // Generate token
-        const token = generateToken({ id: user.id, username: user.username });
-        res.json(createResponse(1, 'Login successful', { token,user }));
-    });
-});
+//         // Generate token
+//         const token = generateToken({ id: user.id, username: user.username });
+//         res.json(createResponse(1, 'Login successful', { token,user }));
+//     });
+// });
 
 // Route to check if user is still logged in by token check
 app.get('/checkLogin', authenticateToken, (req, res) => {
@@ -485,11 +485,112 @@ const getFlagEmoji = (code) => {
 
 // Vendor side ========================================================================================================================
 
+
+// app.post('/login', async (req, res) => {
+//     const { username, password } = req.body;
+
+//     // Validate input
+//     if (!username || !password) {
+//         return res.status(400).json(createResponse(2, 'Username and password are required'));
+//     }
+
+//     const sql = 'SELECT * FROM users WHERE username = ?';
+
+//     // Execute query
+//     db.query(sql, [username], async (err, results) => {
+//         if (err) {
+//             return res.status(500).json(createResponse(2, err.message));
+//         }
+
+//         if (results.length === 0) {
+//             return res.status(404).json(createResponse(3, 'User not found'));
+//         }
+
+//         // Verify password
+//         const user = results[0];
+//         const isMatch = await bcrypt.compare(password, user.password);
+
+//         if (!isMatch) {
+//             return res.status(401).json(createResponse(4, 'Invalid password'));
+//         }
+
+//         // Check if user is a vendor
+//         const vendorSql = 'SELECT * FROM vendors WHERE user_id = ?';
+//         db.query(vendorSql, [user.id], (err, vendorResults) => {
+//             if (err) {
+//                 return res.status(500).json(createResponse(2, err.message));
+//             }
+
+//             // Determine user type
+//             const isVendor = vendorResults.length > 0;
+
+//             // Generate token
+//             const token = generateToken({ id: user.id, username: user.username });
+
+//             // Send response
+//             res.json(createResponse(1, 'Login successful', { token, user, isVendor }));
+//         });
+//     });
+// });
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    // Validate input
+    if (!username || !password) {
+        return res.status(400).json(createResponse(2, 'Username and password are required'));
+    }
+
+    const sql = 'SELECT * FROM users WHERE username = ?';
+
+    // Execute query
+    db.query(sql, [username], async (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json(createResponse(3, 'User not found'));
+        }
+
+        // Verify password
+        const user = results[0];
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json(createResponse(4, 'Invalid password'));
+        }
+
+        // Check if user is a vendor
+        const vendorSql = 'SELECT * FROM vendors WHERE user_id = ?';
+        db.query(vendorSql, [user.id], (err, vendorResults) => {
+            if (err) {
+                return res.status(500).json(createResponse(2, err.message));
+            }
+
+            // Determine user type
+            const isVendor = vendorResults.length > 0;
+
+            // Define token payload
+            const payload = {
+                id: user.id,
+                username: user.username,
+                role: isVendor ? 'vendor' : 'user' // Include role in the token payload
+            };
+
+            // Generate token with role information
+            const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+
+            // Send response
+            res.json(createResponse(1, 'Login successful', { token, user, isVendor }));
+        });
+    });
+});
 // Route to Register a Vendor
 app.post('/register-vendor', async (req, res) => {
     const { 
         username, name, email, phone_number, password, banner_image, country_id, 
-        vendor_name, address, image, vendor_type, user_id 
+        vendor_name, address, image, vendor_type, user_id, featured 
     } = req.body;
 
     // Validate input
@@ -505,10 +606,13 @@ app.post('/register-vendor', async (req, res) => {
         // Insert vendor into the database with a pending approval status
         const vendorQuery = `
             INSERT INTO vendors 
-                (username, name, email, phone_number, password, banner_image, country_id, vendor_name, address, image, status, vendor_type, user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (username, name, email, phone_number, password, banner_image, country_id, vendor_name, address, image, status, vendor_type, user_id, featured)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        const vendorValues = [username, name, email, phone_number, hashedPassword, banner_image, country_id, vendor_name, address, image, 0, vendor_type, user_id];
+        const vendorValues = [
+            username, name, email, phone_number, hashedPassword, banner_image, country_id, 
+            vendor_name, address, image, 0, parseInt(vendor_type), user_id, Boolean(parseInt(featured))
+        ];
 
         db.query(vendorQuery, vendorValues, (err, result) => {
             if (err) {
@@ -524,6 +628,127 @@ app.post('/register-vendor', async (req, res) => {
         res.status(500).json(createResponse(500, 'Internal server error'));
     }
 });
+
+// Route to update vendor details
+app.put('/update-vendor/:id', authenticateToken, async (req, res) => {
+    const vendorId = req.params.id;
+    const { 
+        username, name, email, phone_number, password, banner_image, country_id, 
+        vendor_name, address, image, vendor_type, featured 
+    } = req.body;
+
+    // Validate input
+    if (!username || !name || !email || !phone_number || !password || !country_id || 
+        !vendor_name || !address || !vendor_type) {
+        return res.status(400).json(createResponse(400, 'All required fields must be provided'));
+    }
+
+    try {
+        // Hash the new password if provided
+        let hashedPassword = null;
+        if (password) {
+            hashedPassword = await bcrypt.hash(password, 10);
+        }
+
+        // Prepare SQL query to update vendor
+        const updateQuery = `
+            UPDATE vendors
+            SET 
+                username = ?, 
+                name = ?, 
+                email = ?, 
+                phone_number = ?, 
+                password = ?, 
+                banner_image = ?, 
+                country_id = ?, 
+                vendor_name = ?, 
+                address = ?, 
+                image = ?, 
+                vendor_type = ?, 
+                featured = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        `;
+
+        // Prepare values for the query
+        const values = [
+            username, 
+            name, 
+            email, 
+            phone_number, 
+            hashedPassword || null, // Only update password if it's provided
+            banner_image, 
+            country_id, 
+            vendor_name, 
+            address, 
+            image, 
+            vendor_type, 
+            featured, 
+            vendorId
+        ];
+
+        // Execute SQL query
+        db.query(updateQuery, values, (err, result) => {
+            if (err) {
+                console.error('Error updating vendor:', err);
+                return res.status(500).json(createResponse(500, 'Internal server error'));
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json(createResponse(404, 'Vendor not found'));
+            }
+
+            res.status(200).json(createResponse(200, 'Vendor updated successfully'));
+        });
+    } catch (err) {
+        console.error('Error processing request:', err);
+        res.status(500).json(createResponse(500, 'Internal server error'));
+    }
+});
+
+// Route to check if the user is a vendor or a regular user // vendor or regular user
+app.get('/check-user/:id', (req, res) => {
+    const userId = req.params.id;
+
+    // Validate input
+    if (!userId) {
+        return res.status(400).json(createResponse(400, 'User ID is required'));
+    }
+
+    // Query to check if user is a vendor
+    const vendorQuery = 'SELECT * FROM vendors WHERE user_id = ?';
+
+    db.query(vendorQuery, [userId], (err, vendorResults) => {
+        if (err) {
+            console.error('Error querying vendors:', err);
+            return res.status(500).json(createResponse(500, 'Internal server error'));
+        }
+
+        // If vendor record found
+        if (vendorResults.length > 0) {
+            return res.status(200).json(createResponse(200, 'User is a vendor', { userType: 'vendor' }));
+        }
+
+        // If no vendor record, check if user exists in users table
+        const userQuery = 'SELECT * FROM users WHERE id = ?';
+
+        db.query(userQuery, [userId], (err, userResults) => {
+            if (err) {
+                console.error('Error querying users:', err);
+                return res.status(500).json(createResponse(500, 'Internal server error'));
+            }
+
+            // If user record found
+            if (userResults.length > 0) {
+                return res.status(200).json(createResponse(200, 'User is a regular user', { userType: 'user' }));
+            }
+
+            // If no user or vendor record
+            res.status(404).json(createResponse(404, 'User not found'));
+        });
+    });
+});
+
 
 // Route to check vendor and mystery box status
 app.get('/vendor-status/:userId', (req, res) => {
@@ -707,226 +932,9 @@ app.delete('/mystery_boxes/:id', authenticateToken, (req, res) => {
 
 
 
-// // Route to get all vendors and their mystery box details based on country and optionally filter by vendor type
-// app.get('/customer-dashboard', authenticateToken, (req, res) => {
-//     const { country_id, vendor_type } = req.query;
-
-//     if (!country_id) {
-//         return res.status(400).json({ message: 'Country ID is required' });
-//     }
-
-//     // Build the SQL query dynamically based on the provided parameters
-//     let sql = `
-//         SELECT 
-//             v.id AS vendor_id, 
-//             v.user_id,
-//             v.username, 
-//             v.name, 
-//             v.email, 
-//             v.phone_number, 
-//             v.banner_image, 
-//             v.country_id, 
-//             v.vendor_name, 
-//             v.address, 
-//             v.image AS vendor_image, 
-//             v.status AS vendor_status, 
-//             v.created_at AS vendor_created_at, 
-//             v.updated_at AS vendor_updated_at, 
-//             v.accumulated_rating, 
-//             v.vendor_type,
-//             mb.id AS mystery_box_id,
-//             mb.title AS mystery_box_title,
-//             mb.price AS mystery_box_price,
-//             mb.description AS mystery_box_description,
-//             mb.collection_time AS mystery_box_collection_time,
-//             mb.quantity AS mystery_box_quantity,
-//             mb.days_available AS mystery_box_days_available,
-//             mb.status AS mystery_box_status,
-//             mb.created_at AS mystery_box_created_at,
-//             mb.updated_at AS mystery_box_updated_at
-//         FROM vendors v
-//         LEFT JOIN mystery_boxes mb ON v.id = mb.vendor_id
-//         WHERE v.country_id = ?
-//     `;
-//     const values = [country_id];
-
-//     if (vendor_type) {
-//         sql += ' AND v.vendor_type = ?';
-//         values.push(vendor_type);
-//     }
-
-//     // Execute the query
-//     db.query(sql, values, (err, results) => {
-//         if (err) {
-//             console.error('Database error:', err.message);
-//             return res.status(500).json({ message: 'Internal server error' });
-//         }
-
-//         if (results.length === 0) {
-//             return res.status(404).json({ message: 'No vendors or mystery boxes found for the given country' });
-//         }
-
-//         // Group results by vendor and include mystery box details
-//         const vendors = {};
-//         results.forEach(row => {
-//             if (!vendors[row.vendor_id]) {
-//                 vendors[row.vendor_id] = {
-//                     vendor_id: row.vendor_id,
-//                     user_id: row.user_id,
-//                     username: row.username,
-//                     name: row.name,
-//                     email: row.email,
-//                     phone_number: row.phone_number,
-//                     banner_image: row.banner_image,
-//                     country_id: row.country_id,
-//                     vendor_name: row.vendor_name,
-//                     address: row.address,
-//                     vendor_image: row.vendor_image,
-//                     vendor_status: row.vendor_status,
-//                     created_at: row.vendor_created_at,
-//                     updated_at: row.vendor_updated_at,
-//                     accumulated_rating: row.accumulated_rating,
-//                     vendor_type: row.vendor_type,
-//                     mystery_boxes: []
-//                 };
-//             }
-//             if (row.mystery_box_id) {
-//                 vendors[row.vendor_id].mystery_boxes.push({
-//                     mystery_box_id: row.mystery_box_id,
-//                     title: row.mystery_box_title,
-//                     price: row.mystery_box_price,
-//                     description: row.mystery_box_description,
-//                     collection_time: row.mystery_box_collection_time,
-//                     quantity: row.mystery_box_quantity,
-//                     days_available: row.mystery_box_days_available,
-//                     status: row.mystery_box_status,
-//                     created_at: row.mystery_box_created_at,
-//                     updated_at: row.mystery_box_updated_at
-//                 });
-//             }
-//         });
-
-//         // Filter out vendors with no mystery boxes
-//         const vendorsArray = Object.values(vendors).filter(vendor => vendor.mystery_boxes.length > 0);
-
-//         // Send the vendor and mystery box details as a response
-//         res.status(200).json({
-//             message: 'Vendors and mystery boxes fetched successfully',
-//             vendors: vendorsArray
-//         });
-//     });
-// });
 
 
-// Your route handler
-// app.get('/customer-dashboard', (req, res) => {
-//     const { country_id, vendor_type } = req.query;
 
-//     if (!country_id) {
-//         return res.status(400).json({ message: 'Country ID is required' });
-//     }
-
-//     // Build the SQL query dynamically based on the provided parameters
-//     let sql = `
-//         SELECT 
-//             v.id AS vendor_id, 
-//             v.user_id,
-//             v.username, 
-//             v.name, 
-//             v.email, 
-//             v.phone_number, 
-//             v.banner_image, 
-//             v.country_id, 
-//             v.vendor_name, 
-//             v.address, 
-//             v.image AS vendor_image, 
-//             v.status AS vendor_status, 
-//             v.created_at AS vendor_created_at, 
-//             v.updated_at AS vendor_updated_at, 
-//             v.accumulated_rating, 
-//             v.vendor_type,
-//             mb.id AS mystery_box_id,
-//             mb.title AS mystery_box_title,
-//             mb.price AS mystery_box_price,
-//             mb.description AS mystery_box_description,
-//             mb.collection_time AS mystery_box_collection_time,
-//             mb.quantity AS mystery_box_quantity,
-//             mb.days_available AS mystery_box_days_available,
-//             mb.status AS mystery_box_status,
-//             mb.created_at AS mystery_box_created_at,
-//             mb.updated_at AS mystery_box_updated_at
-//         FROM vendors v
-//         LEFT JOIN mystery_boxes mb ON v.id = mb.vendor_id
-//         WHERE v.country_id = ?
-//     `;
-//     const values = [country_id];
-
-//     if (vendor_type) {
-//         sql += ' AND v.vendor_type = ?';
-//         values.push(vendor_type);
-//     }
-
-//     // Execute the query
-//     db.query(sql, values, (err, results) => {
-//         if (err) {
-//             console.error('Database error:', err.message);
-//             return res.status(500).json({ message: 'Internal server error' });
-//         }
-
-//         if (results.length === 0) {
-//             return res.status(404).json({ message: 'No vendors or mystery boxes found for the given country' });
-//         }
-
-//         // Group results by vendor and include mystery box details
-//         const vendors = {};
-//         results.forEach(row => {
-//             if (!vendors[row.vendor_id]) {
-//                 vendors[row.vendor_id] = {
-//                     vendor_id: row.vendor_id,
-//                     user_id: row.user_id,
-//                     username: row.username,
-//                     name: row.name,
-//                     email: row.email,
-//                     phone_number: row.phone_number,
-//                     banner_image: row.banner_image,
-//                     country_id: row.country_id,
-//                     vendor_name: row.vendor_name,
-//                     address: row.address,
-//                     vendor_image: row.vendor_image,
-//                     vendor_status: row.vendor_status,
-//                     created_at: row.vendor_created_at,
-//                     updated_at: row.vendor_updated_at,
-//                     accumulated_rating: row.accumulated_rating,
-//                     vendor_type: row.vendor_type,
-//                     mystery_boxes: []
-//                 };
-//             }
-//             if (row.mystery_box_id) {
-//                 vendors[row.vendor_id].mystery_boxes.push({
-//                     mystery_box_id: row.mystery_box_id,
-//                     title: row.mystery_box_title,
-//                     price: row.mystery_box_price,
-//                     description: row.mystery_box_description,
-//                     collection_time: row.mystery_box_collection_time,
-//                     quantity: row.mystery_box_quantity,
-//                     days_available: row.mystery_box_days_available,
-//                     status: row.mystery_box_status,
-//                     created_at: row.mystery_box_created_at,
-//                     updated_at: row.mystery_box_updated_at
-//                 });
-//             }
-//         });
-
-//         // Convert the vendors object to an array
-//         const vendorsArray = Object.values(vendors);
-
-//         // Send the vendor and mystery box details as a response
-//         res.status(200).json({
-//             message: 'Vendors and mystery boxes fetched successfully',
-//             vendors: vendorsArray
-//         });
-//     });
-// });
 app.get('/customer-dashboard', (req, res) => {
     const { country_id, vendor_type } = req.query;
 
@@ -962,9 +970,11 @@ app.get('/customer-dashboard', (req, res) => {
             mb.days_available AS mystery_box_days_available,
             mb.status AS mystery_box_status,
             mb.created_at AS mystery_box_created_at,
-            mb.updated_at AS mystery_box_updated_at
+            mb.updated_at AS mystery_box_updated_at,
+            b.image_url AS advertisement_image
         FROM vendors v
         LEFT JOIN mystery_boxes mb ON v.id = mb.vendor_id
+        LEFT JOIN banners b ON b.id = 1  -- Fixed banner_id to 1
         WHERE v.country_id = ?
     `;
     const values = [country_id];
@@ -1003,9 +1013,10 @@ app.get('/customer-dashboard', (req, res) => {
                     vendor_image: row.vendor_image,
                     vendor_status: row.vendor_status,
                     created_at: row.vendor_created_at,
-                    updated_at: row.vendor_updated_at,
+                    updated_at: row.updated_at,
                     accumulated_rating: row.accumulated_rating,
                     vendor_type: row.vendor_type,
+                    advertisement_image: row.advertisement_image,  // Fixed advertisement_image
                     total_stock: 0, // Initialize total stock
                     mystery_boxes: []
                 };
@@ -1041,7 +1052,11 @@ app.get('/customer-dashboard', (req, res) => {
 });
 
 
-app.get('/vendor-dashboard', (req, res) => {
+
+
+//Vendor Dashboard route
+
+app.get('/vendor-dashboard', authenticateToken,(req, res) => {
     const { vendor_id } = req.query;
 
     if (!vendor_id) {
@@ -1074,7 +1089,7 @@ app.get('/vendor-dashboard', (req, res) => {
         SELECT COUNT(*) AS active_orders_count
         FROM orders o
         JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-        WHERE mb.vendor_id = ? AND o.status = 'pending'
+        WHERE mb.vendor_id = ? AND o.status IN ('approved', 'pending')
     `;
 
     const completedOrdersCountSql = `
@@ -1124,171 +1139,8 @@ app.get('/vendor-dashboard', (req, res) => {
     });
 });
 
-
-//Vendor Dashboard route
-
-// app.get('/vendor-dashboard', (req, res) => {
-//     const { vendor_id } = req.query;
-
-//     if (!vendor_id) {
-//         return res.status(400).json({ message: 'Vendor ID is required' });
-//     }
-
-//     // Define the SQL queries to get the required information
-//     const balanceAndEarningsSql = `
-//         SELECT 
-//             v.available_balance, 
-//             v.total_earnings
-//         FROM vendors v
-//         WHERE v.id = ?
-//     `;
-    
-//     const activeOrdersCountSql = `
-//         SELECT COUNT(*) AS active_orders_count
-//         FROM orders o
-//         JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-//         WHERE mb.vendor_id = ? AND o.status = 'pending'
-//     `;
-
-//     const completedOrdersCountSql = `
-//         SELECT COUNT(*) AS completed_orders_count
-//         FROM orders o
-//         JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-//         WHERE mb.vendor_id = ? AND o.status = 'completed'
-//     `;
-
-//     // Execute the SQL queries in sequence
-//     db.query(balanceAndEarningsSql, [vendor_id], (err, balanceEarningsResults) => {
-//         if (err) {
-//             console.error('Database error:', err.message);
-//             return res.status(500).json({ message: 'Internal server error' });
-//         }
-
-//         if (balanceEarningsResults.length === 0) {
-//             return res.status(404).json({ message: 'Vendor not found' });
-//         }
-
-//         const { available_balance, total_earnings } = balanceEarningsResults[0];
-
-//         db.query(activeOrdersCountSql, [vendor_id], (err, activeOrdersResults) => {
-//             if (err) {
-//                 console.error('Database error:', err.message);
-//                 return res.status(500).json({ message: 'Internal server error' });
-//             }
-
-//             const active_orders_count = activeOrdersResults[0].active_orders_count;
-
-//             db.query(completedOrdersCountSql, [vendor_id], (err, completedOrdersResults) => {
-//                 if (err) {
-//                     console.error('Database error:', err.message);
-//                     return res.status(500).json({ message: 'Internal server error' });
-//                 }
-
-//                 const completed_orders_count = completedOrdersResults[0].completed_orders_count;
-
-//                 // Send the dashboard data as a response
-//                 res.status(200).json({
-//                     message: 'Vendor dashboard data fetched successfully',
-//                     data: {
-//                         available_balance,
-//                         total_earnings,
-//                         active_orders_count,
-//                         completed_orders_count
-//                     }
-//                 });
-//             });
-//         });
-//     });
-// });
-
-app.get('/vendor-dashboard', (req, res) => {
-    const { vendor_id } = req.query;
-
-    if (!vendor_id) {
-        return res.status(400).json({ message: 'Vendor ID is required' });
-    }
-
-    // Define the SQL queries to get the required information
-    const vendorDetailsSql = `
-        SELECT 
-            v.id AS vendor_id, 
-            v.username, 
-            v.name, 
-            v.email, 
-            v.phone_number, 
-            v.banner_image, 
-            v.country_id, 
-            v.vendor_name, 
-            v.address, 
-            v.image AS vendor_image, 
-            v.status AS vendor_status, 
-            v.created_at AS vendor_created_at, 
-            v.updated_at AS vendor_updated_at, 
-            v.available_balance, 
-            v.total_earnings
-        FROM vendors v
-        WHERE v.id = ?
-    `;
-    
-    const activeOrdersCountSql = `
-        SELECT COUNT(*) AS active_orders_count
-        FROM orders o
-        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-        WHERE mb.vendor_id = ? AND o.status = 'pending'
-    `;
-
-    const completedOrdersCountSql = `
-        SELECT COUNT(*) AS completed_orders_count
-        FROM orders o
-        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-        WHERE mb.vendor_id = ? AND o.status = 'completed'
-    `;
-
-    // Execute the SQL queries in sequence
-    db.query(vendorDetailsSql, [vendor_id], (err, vendorResults) => {
-        if (err) {
-            console.error('Database error:', err.message);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-
-        if (vendorResults.length === 0) {
-            return res.status(404).json({ message: 'Vendor not found' });
-        }
-
-        const vendorDetails = vendorResults[0];
-
-        db.query(activeOrdersCountSql, [vendor_id], (err, activeOrdersResults) => {
-            if (err) {
-                console.error('Database error:', err.message);
-                return res.status(500).json({ message: 'Internal server error' });
-            }
-
-            const active_orders_count = activeOrdersResults[0].active_orders_count;
-
-            db.query(completedOrdersCountSql, [vendor_id], (err, completedOrdersResults) => {
-                if (err) {
-                    console.error('Database error:', err.message);
-                    return res.status(500).json({ message: 'Internal server error' });
-                }
-
-                const completed_orders_count = completedOrdersResults[0].completed_orders_count;
-
-                // Send the dashboard data as a response
-                res.status(200).json({
-                    message: 'Vendor dashboard data fetched successfully',
-                    data: {
-                        vendor: vendorDetails,
-                        active_orders_count,
-                        completed_orders_count
-                    }
-                });
-            });
-        });
-    });
-});
-
 //Active order
-app.get('/active-orders', (req, res) => {
+app.get('/active-orders',authenticateToken, (req, res) => {
     const { vendor_id } = req.query;
 
     if (!vendor_id) {
@@ -1339,7 +1191,7 @@ app.get('/active-orders', (req, res) => {
         JOIN users u ON o.customer_id = u.id
         JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
         JOIN vendors v ON mb.vendor_id = v.id
-        WHERE o.status = 'pending' AND v.id = ?
+        WHERE o.status IN ('approved', 'pending') AND v.id = ?
     `;
 
     // Execute the SQL query
@@ -1357,6 +1209,79 @@ app.get('/active-orders', (req, res) => {
         res.status(200).json(createResponse(200, 'Active orders fetched successfully', results));
     });
 });
+
+
+// Route to fetch completed orders
+app.get('/completed-orders',authenticateToken, (req, res) => {
+    const { vendor_id } = req.query;
+
+    if (!vendor_id) {
+        return res.status(400).json(createResponse(400, 'Vendor ID is required'));
+    }
+
+    // Define the SQL query to get completed orders along with user and vendor details
+    const sql = `
+        SELECT 
+            o.id AS order_id,
+            o.customer_id,
+            o.mystery_box_id,
+            o.quantity,
+            o.total_price,
+            o.description AS order_description,
+            o.status AS order_status,
+            o.created_at AS order_created_at,
+            o.updated_at AS order_updated_at,
+            u.id AS user_id,
+            u.username AS user_username,
+            u.name AS user_name,
+            u.email AS user_email,
+            u.phone_number AS user_phone_number,
+            mb.id AS mystery_box_id,
+            mb.title AS mystery_box_title,
+            mb.price AS mystery_box_price,
+            mb.description AS mystery_box_description,
+            mb.collection_time AS mystery_box_collection_time,
+            mb.quantity AS mystery_box_quantity,
+            mb.days_available AS mystery_box_days_available,
+            mb.status AS mystery_box_status,
+            mb.created_at AS mystery_box_created_at,
+            mb.updated_at AS mystery_box_updated_at,
+            v.id AS vendor_id,
+            v.username AS vendor_username,
+            v.name AS vendor_name,
+            v.email AS vendor_email,
+            v.phone_number AS vendor_phone_number,
+            v.banner_image AS vendor_banner_image,
+            v.country_id AS vendor_country_id,
+            v.vendor_name AS vendor_vendor_name,
+            v.address AS vendor_address,
+            v.image AS vendor_image,
+            v.status AS vendor_status,
+            v.created_at AS vendor_created_at,
+            v.updated_at AS vendor_updated_at
+        FROM orders o
+        JOIN users u ON o.customer_id = u.id
+        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+        JOIN vendors v ON mb.vendor_id = v.id
+        WHERE o.status = 'completed' AND v.id = ?
+    `;
+
+    // Execute the SQL query
+    db.query(sql, [vendor_id], (err, results) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json(createResponse(500, 'Internal server error'));
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json(createResponse(404, 'No completed orders found for the given vendor'));
+        }
+
+        // Send the completed orders details as a response using the createResponse function
+        res.status(200).json(createResponse(200, 'Completed orders fetched successfully', results));
+    });
+});
+
 
 //ADMIN SIDE =====================================================================================================================
 
@@ -1824,5 +1749,361 @@ app.delete('/delete-banner/:id', authenticateToken, (req, res) => {
         }
 
         res.status(200).json(createResponse(1, 'Banner deleted successfully'));
+    });
+});
+
+
+// Featured Vendor 
+
+
+
+
+//All featured vendors
+
+// Route to get all featured vendors (accessible by admins only)
+app.get('/show-featured-vendors', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json(createResponse(4, 'Forbidden'));
+
+    const sql = 'SELECT * FROM vendors WHERE featured = TRUE ORDER BY id ASC';
+
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json(createResponse(2, err.message));
+
+        if (results.length === 0) {
+            return res.status(404).json(createResponse(3, 'No featured vendors found'));
+        }
+
+        res.status(200).json(createResponse(1, 'Featured vendors retrieved successfully', results));
+    });
+});
+
+// Route to add a featured vendor (accessible by admins only)
+app.post('/add-featured-vendor', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json(createResponse(4, 'Forbidden'));
+
+    const { vendor_id } = req.body;
+
+    if (!vendor_id) {
+        return res.status(400).json(createResponse(2, 'Vendor ID is required'));
+    }
+
+    // Check if the vendor exists
+    const sqlCheckVendor = 'SELECT * FROM vendors WHERE id = ?';
+
+    db.query(sqlCheckVendor, [vendor_id], (err, results) => {
+        if (err) return res.status(500).json(createResponse(2, err.message));
+
+        if (results.length === 0) {
+            return res.status(404).json(createResponse(3, 'Vendor not found'));
+        }
+
+        // Add or update featured status
+        const sqlUpdate = 'UPDATE vendors SET featured = TRUE WHERE id = ?';
+
+        db.query(sqlUpdate, [vendor_id], (err, result) => {
+            if (err) return res.status(500).json(createResponse(2, err.message));
+
+            res.status(200).json(createResponse(1, 'Vendor featured successfully'));
+        });
+    });
+});
+
+// Route to update a featured vendor by ID (accessible by admins only)
+app.put('/update-featured-vendor/:id', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json(createResponse(4, 'Forbidden'));
+
+    const { id } = req.params;
+    const { featured } = req.body;
+
+    if (featured === undefined) {
+        return res.status(400).json(createResponse(2, 'Featured status is required'));
+    }
+
+    const sql = 'UPDATE vendors SET featured = ? WHERE id = ?';
+
+    db.query(sql, [featured, id], (err, result) => {
+        if (err) return res.status(500).json(createResponse(2, err.message));
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(3, 'Vendor not found'));
+        }
+
+        res.status(200).json(createResponse(1, 'Featured status updated successfully'));
+    });
+});
+
+
+// Route to delete a featured vendor by ID (accessible by admins only)
+app.delete('/delete-featured-vendor/:id', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json(createResponse(4, 'Forbidden'));
+
+    const { id } = req.params;
+
+    const sql = 'UPDATE vendors SET featured = FALSE WHERE id = ?';
+
+    db.query(sql, [id], (err, result) => {
+        if (err) return res.status(500).json(createResponse(2, err.message));
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(3, 'Vendor not found'));
+        }
+
+        res.status(200).json(createResponse(1, 'Vendor unfeatured successfully'));
+    });
+});
+
+
+// order placement  ========================
+// Route to Place a New Order (Customer)
+app.post('/place-order', authenticateToken, async (req, res) => {
+    const { customer_id, mystery_box_id, quantity, total_price, description } = req.body;
+
+    // Validate input
+    if (!customer_id || !mystery_box_id || !quantity || !total_price || !description) {
+        return res.status(400).json(createResponse(2, 'All fields are required'));
+    }
+
+    // Check if there is enough stock
+    const stockCheckSql = `
+        SELECT restock_quantity
+        FROM vendor_restocks
+        WHERE mystery_box_id = ?
+    `;
+    db.query(stockCheckSql, [mystery_box_id], (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        if (results.length === 0 || results[0].restock_quantity < quantity) {
+            return res.status(422).json(createResponse(2, 'Not enough stock available'));
+        }
+
+        // Insert order
+        const orderSql = `
+            INSERT INTO orders (customer_id, mystery_box_id, quantity, total_price, description, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+        `;
+        const orderValues = [customer_id, mystery_box_id, quantity, total_price, description, 'pending'];
+
+        db.query(orderSql, orderValues, (err, result) => {
+            if (err) {
+                return res.status(500).json(createResponse(2, err.message));
+            }
+
+            if (!result.insertId) {
+                return res.status(422).json(createResponse(2, 'Order could not be placed'));
+            }
+
+            // Update stock
+            const updateStockSql = `
+                UPDATE vendor_restocks
+                SET restock_quantity = restock_quantity - ?
+                WHERE mystery_box_id = ?
+            `;
+            db.query(updateStockSql, [quantity, mystery_box_id], (err) => {
+                if (err) {
+                    return res.status(500).json(createResponse(2, err.message));
+                }
+
+                // Insert transaction
+                const transactionSql = `
+                    INSERT INTO transactions (vendor_id, amount, transaction_type, created_at)
+                    SELECT mb.vendor_id, ?, 'credit', NOW()
+                    FROM mystery_boxes mb
+                    WHERE mb.id = ?
+                `;
+                const transactionValues = [total_price, mystery_box_id];
+
+                db.query(transactionSql, transactionValues, (err) => {
+                    if (err) {
+                        return res.status(500).json(createResponse(2, err.message));
+                    }
+
+                    // Insert sale
+                    const saleSql = `
+                        INSERT INTO sales (mystery_box_id, user_id, quantity_sold, sold_at)
+                        VALUES (?, ?, ?, NOW())
+                    `;
+                    const saleValues = [mystery_box_id, customer_id, quantity];
+
+                    db.query(saleSql, saleValues, (err) => {
+                        if (err) {
+                            return res.status(500).json(createResponse(2, err.message));
+                        }
+
+                        // Fetch the newly created order
+                        const selectSql = 'SELECT * FROM orders WHERE id = ?';
+                        db.query(selectSql, [result.insertId], (err, results) => {
+                            if (err) {
+                                return res.status(500).json(createResponse(2, err.message));
+                            }
+
+                            res.status(200).json(createResponse(1, 'Order has been placed successfully', results[0]));
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+
+
+
+// Route to Approve an Order (Vendor)
+// Route to Approve an Order (Vendor)
+app.post('/order-approval/:order_id',authenticateToken, (req, res) => {
+    const { order_id } = req.params;
+
+    // Fetch the order
+    const selectSql = 'SELECT * FROM orders WHERE id = ?';
+    db.query(selectSql, [order_id], (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        if (results.length === 0 || results[0].status !== 'pending') {
+            return res.status(422).json(createResponse(2, 'No record found or order cannot be approved'));
+        }
+
+        // Update the order status to 'approved'
+        const updateSql = 'UPDATE orders SET status = ? WHERE id = ?';
+        db.query(updateSql, ['approved', order_id], (err, result) => {
+            if (err) {
+                return res.status(500).json(createResponse(2, err.message));
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(422).json(createResponse(2, 'Order could not be approved'));
+            }
+
+            // Fetch the updated order
+            db.query(selectSql, [order_id], (err, updatedResults) => {
+                if (err) {
+                    return res.status(500).json(createResponse(2, err.message));
+                }
+
+                res.status(200).json(createResponse(1, 'Order has been approved', updatedResults[0]));
+            });
+        });
+    });
+});
+
+
+
+// Route to Complete an Order (Vendor)
+// Route to Complete an Order (Vendor)
+app.post('/order-completed/:order_id', authenticateToken, (req, res) => {
+    const { order_id } = req.params;
+
+    // Fetch the order
+    const selectSql = 'SELECT * FROM orders WHERE id = ?';
+    db.query(selectSql, [order_id], (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        if (results.length === 0 || results[0].status !== 'approved') {
+            return res.status(422).json(createResponse(2, 'No record found or order cannot be completed'));
+        }
+
+        // Update the order status to 'completed'
+        const updateSql = 'UPDATE orders SET status = ? WHERE id = ?';
+        db.query(updateSql, ['completed', order_id], (err, result) => {
+            if (err) {
+                return res.status(500).json(createResponse(2, err.message));
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(422).json(createResponse(2, 'Order could not be completed'));
+            }
+
+            // Fetch the updated order
+            db.query(selectSql, [order_id], (err, updatedResults) => {
+                if (err) {
+                    return res.status(500).json(createResponse(2, err.message));
+                }
+
+                // Optionally, update transaction details
+                // Example: If completed status implies a payment or other action
+                const transactionUpdateSql = `
+                    UPDATE transactions
+                    SET amount = ?
+                    WHERE vendor_id = (SELECT mb.vendor_id FROM mystery_boxes mb JOIN orders o ON mb.id = o.mystery_box_id WHERE o.id = ?)
+                `;
+                const transactionUpdateValues = [results[0].total_price, order_id];
+
+                db.query(transactionUpdateSql, transactionUpdateValues, (err) => {
+                    if (err) {
+                        return res.status(500).json(createResponse(2, err.message));
+                    }
+
+                    res.status(200).json(createResponse(1, 'Order has been completed', updatedResults[0]));
+                });
+            });
+        });
+    });
+});
+
+app.get('/orders',authenticateToken,(req, res) => {
+    const sql = 'SELECT * FROM orders';
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        res.status(200).json(createResponse(1, 'Orders fetched successfully', { orders: results }));
+    });
+});
+
+// Route to Restock Inventory (Vendor)
+app.post('/restock-inventory', authenticateToken, async (req, res) => {
+    const { vendor_id, mystery_box_id, restock_quantity } = req.body;
+
+    // Validate input
+    if (!vendor_id || !mystery_box_id || !restock_quantity) {
+        return res.status(400).json(createResponse(2, 'All fields are required'));
+    }
+
+    // Update or Insert restock quantity
+    const checkStockSql = `
+        SELECT restock_quantity
+        FROM vendor_restocks
+        WHERE vendor_id = ? AND mystery_box_id = ?
+    `;
+    db.query(checkStockSql, [vendor_id, mystery_box_id], (err, results) => {
+        if (err) {
+            return res.status(500).json(createResponse(2, err.message));
+        }
+
+        if (results.length > 0) {
+            // Update existing stock
+            const updateStockSql = `
+                UPDATE vendor_restocks
+                SET restock_quantity = restock_quantity + ?
+                WHERE vendor_id = ? AND mystery_box_id = ?
+            `;
+            db.query(updateStockSql, [restock_quantity, vendor_id, mystery_box_id], (err) => {
+                if (err) {
+                    return res.status(500).json(createResponse(2, err.message));
+                }
+
+                res.status(200).json(createResponse(1, 'Inventory has been restocked successfully'));
+            });
+        } else {
+            // Insert new stock entry
+            const insertStockSql = `
+                INSERT INTO vendor_restocks (vendor_id, mystery_box_id, restock_quantity)
+                VALUES (?, ?, ?)
+            `;
+            db.query(insertStockSql, [vendor_id, mystery_box_id, restock_quantity], (err) => {
+                if (err) {
+                    return res.status(500).json(createResponse(2, err.message));
+                }
+
+                res.status(200).json(createResponse(1, 'Inventory has been restocked successfully'));
+            });
+        }
     });
 });
