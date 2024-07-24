@@ -2107,3 +2107,8 @@ app.post('/restock-inventory', authenticateToken, async (req, res) => {
         }
     });
 });
+
+// Define a route for the welcome message
+app.get('/', (req, res) => {
+    res.send('Welcome to my Heroku app!');
+  });
