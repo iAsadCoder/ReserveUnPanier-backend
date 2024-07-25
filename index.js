@@ -5,10 +5,11 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const app = express();
-const port = 3000;
+//const port = 3000;
 const multer = require('multer');
 const path = require('path');
 
+const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON
 app.use(express.json());
