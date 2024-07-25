@@ -20,7 +20,6 @@ const db = mysql.createConnection({
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
-    port: port
 });
 
 // Multer setup for file uploads
@@ -57,10 +56,6 @@ db.connect(err => {
     console.log('MySQL Connected...');
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-});
 
 // Standard response format
 const createResponse = (code, message, data = null) => ({
