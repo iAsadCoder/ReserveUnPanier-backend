@@ -36,14 +36,6 @@ const upload = multer({ storage });
 
 const fs = require('fs');
 
-// Connect to MySQL
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to MySQL:', err.message);
-        return;
-    }
-    console.log('MySQL Connected...');
-});
 
 
 // Serve user profile images
