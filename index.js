@@ -1,15 +1,15 @@
 const express = require('express');
 require('dotenv').config();
-const mysql = require('mysql');
+//const mysql = require('mysql');
+const mysql = require('mysql2');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const app = express();
-//const port = 3000;
 const multer = require('multer');
 const path = require('path');
 
-const PORT = process.env.PORT || 3306;
+const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -36,7 +36,9 @@ const upload = multer({ storage });
 
 const fs = require('fs');
 
-
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 
 // Serve user profile images
 app.get('/images/:filename', (req, res) => {
