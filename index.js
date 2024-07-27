@@ -1317,7 +1317,7 @@ app.post('/admin-login', async (req, res) => {
         return res.status(400).json(createResponse(400, 'Username and password are required'));
     }
 
-    const sql = 'SELECT * FROM admins WHERE username = ?';
+    const sql = 'SELECT id, username, name, email, phone_number, profile_image, password FROM admins WHERE username = ?';
 
     // Execute query
     db.query(sql, [username], async (err, results) => {
@@ -1339,13 +1339,12 @@ app.post('/admin-login', async (req, res) => {
         }
 
         // Generate token
-       // const token = generateToken({ id: admin.id, username: admin.username }, 'admin');
         const token = generateAdminToken(admin);
 
+        // Send the response with token and admin details
         res.status(200).json(createResponse(200, 'Login successful', { token, admin }));
     });
 });
-
 
 // Route to register a new admin
 app.post('/admin-register', async (req, res) => {
