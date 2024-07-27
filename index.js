@@ -1312,9 +1312,12 @@ app.get('/admin/:id', authenticateToken, (req, res) => {
             return res.status(404).json(createResponse(3, 'Admin not found'));
         }
 
-        res.status(200).json(createResponse(1, 'Admin found', results[0]));
+        res.status(200).json(createResponse(200, 'Admin found', results[0]));
     });
 });
+
+
+
 
 // Route to login and get a token
 app.post('/admin-login', async (req, res) => {
@@ -1426,7 +1429,7 @@ app.post('/admin-logout', authenticateToken,(req, res) => {
     // For example, you might add the token to a blacklist or database of invalidated tokens.
     
     // Respond with success message
-    res.status(200).json(createResponse(1, 'Admin logout successful'));
+    res.status(200).json(createResponse(200, 'Admin logout successful'));
 });
 
 
