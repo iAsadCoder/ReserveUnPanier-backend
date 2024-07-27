@@ -40,6 +40,8 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
+  server.setTimeout(120000); // 2 minutes
+
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Serve user profile images
