@@ -1515,23 +1515,23 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 
 // Dashboard Admin
 // Route to get admin dashboard data
-app.get('/admin-dashboard', async (req, res) => {
+app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
     try {
         // Fetch total registered users count
-        const [usersCountResult] = 0//await db.query('SELECT COUNT(*) AS total_users FROM users');
+        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
         
         // Fetch account approval request count
-        const [accountApprovalCountResult] = 0//await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
+        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
         
         // Fetch mystery box approval request count
-        const [mysteryBoxApprovalCountResult] = 0//await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
+        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
         
         // Fetch list of featured restaurants
-        const [featuredRestaurantsResult] = 0//await db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1');
+        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1');
 
         const responseData = {
             total_users: usersCountResult[0].total_users,
