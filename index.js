@@ -1558,23 +1558,19 @@ app.get('/admin-dash', authenticateToken, async (req, res) => {
     }
 
     try {
-        // Fetch total registered users count
-        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
-        
-        // Fetch account approval request count
-        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
-        
-        // Fetch mystery box approval request count
-        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
-        
-        // Fetch list of featured restaurants
-        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1');
+        // Fetch all required data in parallel
+        const [usersCountResult, accountApprovalCountResult, mysteryBoxApprovalCountResult, featuredRestaurantsResult] = await Promise.all([
+            db.query('SELECT COUNT(*) AS total_users FROM users'),
+            db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0'),
+            db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0'),
+            db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1')
+        ]);
 
         const responseData = {
-            total_users: usersCountResult[0].total_users,
-            approval_requests: accountApprovalCountResult[0].approval_requests,
-            box_requests: mysteryBoxApprovalCountResult[0].box_requests,
-            featured_restaurants: featuredRestaurantsResult
+            total_users: usersCountResult[0][0].total_users,
+            approval_requests: accountApprovalCountResult[0][0].approval_requests,
+            box_requests: mysteryBoxApprovalCountResult[0][0].box_requests,
+            featured_restaurants: featuredRestaurantsResult[0]
         };
 
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
