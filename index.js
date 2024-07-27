@@ -1489,32 +1489,29 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
 
     try {
         // Fetch total registered users count
-        const usersCountQuery = 'SELECT COUNT(*) AS total_users FROM users';
-        const [usersCountResult] = await db.query(usersCountQuery);
-
+        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
+        
         // Fetch account approval request count
-        const accountApprovalCountQuery = 'SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0';
-        const [accountApprovalCountResult] = await db.query(accountApprovalCountQuery);
-
+        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
+        
         // Fetch mystery box approval request count
-        const mysteryBoxApprovalCountQuery = 'SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0';
-        const [mysteryBoxApprovalCountResult] = await db.query(mysteryBoxApprovalCountQuery);
-
+        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
+        
         // Fetch list of featured restaurants
-        const featuredRestaurantsQuery = 'SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1';
-        const featuredRestaurantsResult = await db.query(featuredRestaurantsQuery);
+        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1');
 
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
-            total_users: usersCountResult.total_users,
-            approval_requests: accountApprovalCountResult.approval_requests,
-            box_requests: mysteryBoxApprovalCountResult.box_requests,
+            total_users: usersCountResult[0].total_users,
+            approval_requests: accountApprovalCountResult[0].approval_requests,
+            box_requests: mysteryBoxApprovalCountResult[0].box_requests,
             featured_restaurants: featuredRestaurantsResult
         }));
     } catch (err) {
-        console.error('Error fetching dashboard data:', err.message);
+        console.error('Error fetching dashboard data:', err);
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
