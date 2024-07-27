@@ -1522,16 +1522,24 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
 
     try {
         // Fetch total registered users count
+        console.log('Running query for total_users');
         const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
+        console.log('Total users count result:', usersCountResult);
         
         // Fetch account approval request count
+        console.log('Running query for approval_requests');
         const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
+        console.log('Account approval requests count result:', accountApprovalCountResult);
         
         // Fetch mystery box approval request count
+        console.log('Running query for box_requests');
         const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
+        console.log('Mystery box approval requests count result:', mysteryBoxApprovalCountResult);
         
         // Fetch list of featured restaurants
+        console.log('Running query for featured_restaurants');
         const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1');
+        console.log('Featured restaurants result:', featuredRestaurantsResult);
 
         const responseData = {
             total_users: usersCountResult[0].total_users,
@@ -1549,6 +1557,7 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
