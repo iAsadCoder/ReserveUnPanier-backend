@@ -1484,42 +1484,6 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 
 //Dashboard Admin 
 //Route to get admin dashboard data
-// app.get('/admin-dashboard', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
-
-//     try {
-//         const connection = await pool.getConnection();
-
-//         try {
-//             // Single query to fetch all required counts and data
-//             const [results] = await connection.query(`
-//             SELECT
-//             (SELECT COUNT(*) FROM users) AS total_users,
-//             (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
-//             (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
-//             (SELECT COALESCE(
-//                 JSON_ARRAYAGG(
-//                     JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address)
-//                 ), JSON_ARRAY()
-//             ) FROM vendors WHERE featured = 1) AS featured_restaurants
-//             `);
-
-//             res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
-//                 total_users: results[0].total_users,
-//                 approval_requests: results[0].approval_requests,
-//                 box_requests: results[0].box_requests,
-//                 featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : [] // Convert JSON string to object
-//             }));
-//         } finally {
-//             connection.release();
-//         }
-//     } catch (err) {
-//         console.error('Error fetching dashboard data:', err);
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     }
-// });
 app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
@@ -1527,17 +1491,26 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
 
     try {
         const connection = await pool.getConnection();
+
         try {
-            // Simplified query to test fetching counts
+            // Single query to fetch all required counts and data
             const [results] = await connection.query(`
             SELECT
-                (SELECT COUNT(*) FROM users) AS total_users,
-                (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests
+            (SELECT COUNT(*) FROM users) AS total_users,
+            (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
+            (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
+            (SELECT COALESCE(
+                JSON_ARRAYAGG(
+                    JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address)
+                ), JSON_ARRAY()
+            ) FROM vendors WHERE featured = 1) AS featured_restaurants
             `);
 
             res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
                 total_users: results[0].total_users,
-                approval_requests: results[0].approval_requests
+                approval_requests: results[0].approval_requests,
+                box_requests: results[0].box_requests,
+                featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : [] // Convert JSON string to object
             }));
         } finally {
             connection.release();
