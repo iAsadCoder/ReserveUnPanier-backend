@@ -1551,6 +1551,42 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
 });
 
 
+//Final testing
+app.get('/admin-dash', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    try {
+        // Fetch total registered users count
+        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
+        
+        // Fetch account approval request count
+        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
+        
+        // Fetch mystery box approval request count
+        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
+        
+        // Fetch list of featured restaurants
+        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1');
+
+        const responseData = {
+            total_users: usersCountResult[0].total_users,
+            approval_requests: accountApprovalCountResult[0].approval_requests,
+            box_requests: mysteryBoxApprovalCountResult[0].box_requests,
+            featured_restaurants: featuredRestaurantsResult
+        };
+
+        res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
+    } catch (err) {
+        console.error('Error fetching dashboard data:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
+
 
 
 //Route for Admin to Approve/Reject Vendors
