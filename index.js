@@ -40,13 +40,13 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-// Serve static files from the 'uploads' directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Serve user profile images
+
 app.get('/images/:filename', (req, res) => {
     const { filename } = req.params;
-    const filePath = path.join(__dirname, 'uploads', filename); // Adjust the path if needed
+    const filePath = path.join(process.cwd(), 'uploads', filename); // Use process.cwd() for root directory
 
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
