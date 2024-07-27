@@ -1516,37 +1516,53 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 // Dashboard Admin
 // Route to get admin dashboard data
 app.get('/admin-dashboard', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json(createResponse(4, 'Forbidden'));
-    }
-
     try {
-        // Fetch total registered users count
-        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
-        
-        // Fetch account approval request count
-        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
-        
-        // Fetch mystery box approval request count
-        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
-        
-        // Fetch list of featured restaurants
-        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1');
+        const sql = `
+            SELECT 
+                id, 
+                country_name, 
+                updated_at, 
+                country_code, 
+                flag_image, 
+                emoji, 
+                currency, 
+                currency_code, 
+                status, 
+                created_at 
+            FROM countries`;
 
-        const responseData = {
-            total_users: usersCountResult[0].total_users,
-            approval_requests: accountApprovalCountResult[0].approval_requests,
-            box_requests: mysteryBoxApprovalCountResult[0].box_requests,
-            featured_restaurants: featuredRestaurantsResult
-        };
+        db.query(sql, (err, results) => {
+            if (err) {
+                console.error('Database error:', err.message);
+                return res.status(500).json({ code: 2, message: 'Internal server error' });
+            }
 
-        res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
-    } catch (err) {
-        console.error('Error fetching dashboard data:', {
-            message: err.message,
-            stack: err.stack
+            if (results.length === 0) {
+                return res.status(404).json({ code: 3, message: 'No countries found' });
+            }
+
+            const countries = results.map(country => {
+                const flag = getFlagEmoji(country.country_code);
+                return {
+                    id: country.id,
+                    country_name: country.country_name,
+                    country_code: country.country_code,
+                    flag_image: country.flag_image,
+                    flag: flag,
+                    emoji: country.emoji,
+                    currency: country.currency,
+                    currency_code: country.currency_code,
+                    status: country.status,
+                    created_at: country.created_at,
+                    updated_at: country.updated_at
+                };
+            });
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.status(200).json({ code: 1, message: 'Countries found', countries: countries });
         });
-        res.status(500).json(createResponse(2, 'Internal server error'));
+    } catch (err) {
+        return res.status(500).json({ code: 2, message: 'Internal server error' });
     }
 });
 
