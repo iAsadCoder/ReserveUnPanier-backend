@@ -1521,31 +1521,23 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     }
 
     try {
-        // Fetch total registered users count
-        console.log('Running query for total_users');
-        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
-        console.log('Total users count result:', usersCountResult);
-        
-        // Fetch account approval request count
-        console.log('Running query for approval_requests');
-        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
-        console.log('Account approval requests count result:', accountApprovalCountResult);
-        
-        // Fetch mystery box approval request count
-        console.log('Running query for box_requests');
-        const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
-        console.log('Mystery box approval requests count result:', mysteryBoxApprovalCountResult);
-        
-        // Fetch list of featured restaurants
-        console.log('Running query for featured_restaurants');
-        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE  featured = 1');
-        console.log('Featured restaurants result:', featuredRestaurantsResult);
+        // Single query to fetch all required counts and data
+        const query = `
+            SELECT
+                (SELECT COUNT(*) FROM users) AS total_users,
+                (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
+                (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
+                (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address))
+                 FROM vendors WHERE featured = 1) AS featured_restaurants
+        `;
+
+        const [results] = await db.query(query);
 
         const responseData = {
-            total_users: usersCountResult[0].total_users,
-            approval_requests: accountApprovalCountResult[0].approval_requests,
-            box_requests: mysteryBoxApprovalCountResult[0].box_requests,
-            featured_restaurants: featuredRestaurantsResult
+            total_users: results[0].total_users,
+            approval_requests: results[0].approval_requests,
+            box_requests: results[0].box_requests,
+            featured_restaurants: JSON.parse(results[0].featured_restaurants) // Convert JSON string to object
         };
 
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
@@ -1557,6 +1549,7 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
