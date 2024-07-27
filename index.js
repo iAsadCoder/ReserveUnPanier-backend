@@ -1483,83 +1483,41 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 });
 
 //Dashboard Admin 
-// Route to get admin dashboard data
-// app.get('/admin-dashboard', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
-
-//     try {
-//         // Fetch total registered users count
-//         const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
-        
-//         // Fetch account approval request count
-//         const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
-        
-//         // Fetch mystery box approval request count
-//         const [mysteryBoxApprovalCountResult] = await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
-        
-//         // Fetch list of featured restaurants
-//         const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1');
-
-//         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
-//             total_users: usersCountResult[0].total_users,
-//             approval_requests: accountApprovalCountResult[0].approval_requests,
-//             box_requests: mysteryBoxApprovalCountResult[0].box_requests,
-//             featured_restaurants: featuredRestaurantsResult
-//         }));
-//     } catch (err) {
-//         console.error('Error fetching dashboard data:', err);
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     }
-// });
-
-
-// Dashboard Admin
-// Route to get admin dashboard data
+//Route to get admin dashboard data
 app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
     try {
-        // Optimized single query to fetch all required counts and data
-        const query = `
-            SELECT
-                COUNT(DISTINCT u.id) AS total_users,
-                SUM(CASE WHEN v.status = 0 THEN 1 ELSE 0 END) AS approval_requests,
-                SUM(CASE WHEN m.status = 0 THEN 1 ELSE 0 END) AS box_requests,
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', v.id,
-                        'vendor_name', v.vendor_name,
-                        'address', v.address
-                    )
-                ) AS featured_restaurants
-            FROM
-                users u
-            LEFT JOIN vendors v ON v.featured = 1
-            LEFT JOIN mystery_boxes m ON 1=1
-        `;
+        const connection = await pool.getConnection();
 
-        const [results] = await db.query(query);
+        try {
+            // Single query to fetch all required counts and data
+            const [results] = await connection.query(`
+                SELECT
+                    (SELECT COUNT(*) FROM users) AS total_users,
+                    (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
+                    (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
+                    (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address))
+                     FROM vendors WHERE is_featured = 1) AS featured_restaurants
+            `);
 
-        const responseData = {
-            total_users: results[0].total_users,
-            approval_requests: results[0].approval_requests,
-            box_requests: results[0].box_requests,
-            featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : [] // Convert JSON string to object
-        };
-
-        res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
+            res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
+                total_users: results[0].total_users,
+                approval_requests: results[0].approval_requests,
+                box_requests: results[0].box_requests,
+                featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : [] // Convert JSON string to object
+            }));
+        } finally {
+            connection.release();
+        }
     } catch (err) {
-        console.error('Error fetching dashboard data:', {
-            message: err.message,
-            stack: err.stack
-        });
+        console.error('Error fetching dashboard data:', err);
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
