@@ -40,7 +40,7 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  server.setTimeout(120000); // 2 minutes
+  
 
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -1523,14 +1523,23 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     }
 
     try {
-        // Single query to fetch all required counts and data
+        // Optimized single query to fetch all required counts and data
         const query = `
             SELECT
-                (SELECT COUNT(*) FROM users) AS total_users,
-                (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
-                (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
-                (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address))
-                 FROM vendors WHERE featured = 1) AS featured_restaurants
+                COUNT(DISTINCT u.id) AS total_users,
+                SUM(CASE WHEN v.status = 0 THEN 1 ELSE 0 END) AS approval_requests,
+                SUM(CASE WHEN m.status = 0 THEN 1 ELSE 0 END) AS box_requests,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'id', v.id,
+                        'vendor_name', v.vendor_name,
+                        'address', v.address
+                    )
+                ) AS featured_restaurants
+            FROM
+                users u
+            LEFT JOIN vendors v ON v.featured = 1
+            LEFT JOIN mystery_boxes m ON 1=1
         `;
 
         const [results] = await db.query(query);
@@ -1551,6 +1560,7 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
