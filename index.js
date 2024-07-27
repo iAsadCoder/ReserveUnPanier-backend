@@ -40,6 +40,9 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
+// Serve static files from the 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Serve user profile images
 app.get('/images/:filename', (req, res) => {
     const { filename } = req.params;
