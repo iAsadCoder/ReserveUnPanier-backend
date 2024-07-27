@@ -1562,8 +1562,8 @@ app.get('/admin-dash', authenticateToken, async (req, res) => {
         const [usersCountResult, accountApprovalCountResult, mysteryBoxApprovalCountResult, featuredRestaurantsResult] = await Promise.all([
             db.query('SELECT COUNT(*) AS total_users FROM users'),
             db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0'),
-            db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0'),
-            db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1')
+            db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0')
+          //  db.query('SELECT id, vendor_name, address FROM vendors WHERE featured = 1')
         ]);
 
         const responseData = {
