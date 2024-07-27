@@ -1522,10 +1522,10 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
 
     try {
         // Fetch total registered users count
-        const [usersCountResult] = await db.query('SELECT COUNT(*) AS total_users FROM users');
+        const [usersCountResult] = 0//await db.query('SELECT COUNT(*) AS total_users FROM users');
         
         // Fetch account approval request count
-        const [accountApprovalCountResult] = await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
+        const [accountApprovalCountResult] = 0//await db.query('SELECT COUNT(*) AS approval_requests FROM vendors WHERE status = 0');
         
         // Fetch mystery box approval request count
         const [mysteryBoxApprovalCountResult] = 0//await db.query('SELECT COUNT(*) AS box_requests FROM mystery_boxes WHERE status = 0');
