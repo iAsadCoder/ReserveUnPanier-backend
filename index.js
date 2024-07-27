@@ -1533,7 +1533,6 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         // Fetch list of featured restaurants
         const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1');
 
-        // Build the response object
         const responseData = {
             total_users: usersCountResult[0].total_users,
             approval_requests: accountApprovalCountResult[0].approval_requests,
@@ -1541,13 +1540,16 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
             featured_restaurants: featuredRestaurantsResult
         };
 
-        // Send the dashboard data as a response
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
     } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        console.error('Error fetching dashboard data:', {
+            message: err.message,
+            stack: err.stack
+        });
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
 
 
 
