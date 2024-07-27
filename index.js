@@ -63,12 +63,18 @@ db.connect(err => {
 
 
 // Standard response format
-const createResponse = (code, message, data = null) => ({
-    code,
+// const createResponse = (code, message, data = null) => ({
+//     code,
+//     message,
+//     response: {
+//         data,
+//     },
+// });
+
+const createResponse = (status, message, data = null) => ({
+    status,
     message,
-    response: {
-        data,
-    },
+    data
 });
 
 
