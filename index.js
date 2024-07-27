@@ -1538,7 +1538,7 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         
         // Fetch list of featured restaurants
         console.log('Running query for featured_restaurants');
-        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE is_featured = 1');
+        const [featuredRestaurantsResult] = await db.query('SELECT id, vendor_name, address FROM vendors WHERE  featured = 1');
         console.log('Featured restaurants result:', featuredRestaurantsResult);
 
         const responseData = {
