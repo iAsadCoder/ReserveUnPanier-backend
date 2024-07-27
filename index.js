@@ -1495,15 +1495,19 @@ app.get('/admin-dashboard', authenticateToken, async (req, res) => {
         try {
             // Single query to fetch all required counts and data
             const [results] = await connection.query(`
-            SELECT
-            (SELECT COUNT(*) FROM users) AS total_users,
-            (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
-            (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
-            (SELECT COALESCE(
-                JSON_ARRAYAGG(
-                    JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address)
-                ), JSON_ARRAY()
-            ) FROM vendors WHERE featured = 1) AS featured_restaurants
+                SELECT
+                    (SELECT COUNT(*) FROM users) AS total_users,
+                    (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
+                    (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
+                    (SELECT COALESCE(
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', id,
+                                'vendor_name', vendor_name,
+                                'address', address
+                            )
+                        ), JSON_ARRAY()
+                    ) FROM vendors WHERE featured = 1) AS featured_restaurants
             `);
 
             res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', {
