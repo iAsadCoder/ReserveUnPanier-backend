@@ -1515,7 +1515,7 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 
 // Dashboard Admin
 // Route to get admin dashboard data
-app.get('/admin-dashboard', authenticateToken, async (req, res) => {
+app.get('/admin-dashboard', async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
