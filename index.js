@@ -1515,8 +1515,7 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 
 // Dashboard Admin
 // Route to get admin dashboard data
-// Route to get admin dashboard data
-app.get('/admin-dashboard', async (req, res) => {
+app.get('/admin-dashboard', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
@@ -1528,20 +1527,17 @@ app.get('/admin-dashboard', async (req, res) => {
                 (SELECT COUNT(*) FROM users) AS total_users,
                 (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
                 (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
-                (SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address)
-                )
+                (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address))
                  FROM vendors WHERE featured = 1) AS featured_restaurants
         `;
 
         const [results] = await db.query(query);
 
-        // Ensure results are not undefined and handle empty JSON array
         const responseData = {
-            total_users: results[0].total_users || 0,
-            approval_requests: results[0].approval_requests || 0,
-            box_requests: results[0].box_requests || 0,
-            featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : []
+            total_users: results[0].total_users,
+            approval_requests: results[0].approval_requests,
+            box_requests: results[0].box_requests,
+            featured_restaurants: results[0].featured_restaurants ? JSON.parse(results[0].featured_restaurants) : [] // Convert JSON string to object
         };
 
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
@@ -1553,9 +1549,6 @@ app.get('/admin-dashboard', async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
-
-
-
 
 
 

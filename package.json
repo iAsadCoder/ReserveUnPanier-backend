@@ -1,6 +1,17 @@
 {
   "name": "myproject",
   "version": "1.0.0",
+  "configurations": [
+    {
+        "type": "node",
+        "request": "launch",
+        "name": "Launch Program",
+        "program": "${workspaceFolder}/app.js",
+        "restart": true,
+        "console": "integratedTerminal",
+        "internalConsoleOptions": "openOnSessionStart"
+    }
+],
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
