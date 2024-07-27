@@ -1341,8 +1341,23 @@ app.post('/admin-login', async (req, res) => {
         // Generate token
         const token = generateAdminToken(admin);
 
-        // Send the response with token and admin details
-        res.status(200).json(createResponse(200, 'Login successful', { token, admin }));
+        // Construct the JSON response with token and admin details, excluding password
+        const responsePayload = {
+            token: token,   // Include token as a string
+            admin: {        // Include admin details as an object, excluding password
+                id: admin.id,
+                username: admin.username,
+                name: admin.name,
+                email: admin.email,
+                phone_number: admin.phone_number,
+                profile_image: admin.profile_image,
+                created_at: admin.created_at,
+                updated_at: admin.updated_at
+            }
+        };
+
+        // Send the response
+        res.status(200).json(createResponse(200, 'Login successful', responsePayload));
     });
 });
 
