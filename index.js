@@ -1516,56 +1516,44 @@ app.put('/editAdmin/:id', upload.single('profile_image'),authenticateToken, asyn
 // Dashboard Admin
 // Route to get admin dashboard data
 app.get('/admin-dashboard', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
     try {
-        const sql = `
-            SELECT 
-                id, 
-                country_name, 
-                updated_at, 
-                country_code, 
-                flag_image, 
-                emoji, 
-                currency, 
-                currency_code, 
-                status, 
-                created_at 
-            FROM countries`;
+        const connection = await pool.getConnection();
 
-        db.query(sql, (err, results) => {
-            if (err) {
-                console.error('Database error:', err.message);
-                return res.status(500).json({ code: 2, message: 'Internal server error' });
-            }
+        try {
+            // Query to get the required data
+            const [results] = await connection.query(`
+                SELECT
+                    (SELECT COUNT(*) FROM users) AS total_users,
+                    (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests,
+                    (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests,
+                    (SELECT COALESCE(
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT('id', id, 'vendor_name', vendor_name, 'address', address)
+                        ), JSON_ARRAY()
+                    ) FROM vendors WHERE featured = 1) AS featured_vendors
+            `);
 
-            if (results.length === 0) {
-                return res.status(404).json({ code: 3, message: 'No countries found' });
-            }
+            // Response data
+            const responseData = {
+                total_users: results[0].total_users,
+                approval_requests: results[0].approval_requests,
+                box_requests: results[0].box_requests,
+                featured_vendors: results[0].featured_vendors ? JSON.parse(results[0].featured_vendors) : [] // Convert JSON string to object
+            };
 
-            const countries = results.map(country => {
-                const flag = getFlagEmoji(country.country_code);
-                return {
-                    id: country.id,
-                    country_name: country.country_name,
-                    country_code: country.country_code,
-                    flag_image: country.flag_image,
-                    flag: flag,
-                    emoji: country.emoji,
-                    currency: country.currency,
-                    currency_code: country.currency_code,
-                    status: country.status,
-                    created_at: country.created_at,
-                    updated_at: country.updated_at
-                };
-            });
-
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            res.status(200).json({ code: 1, message: 'Countries found', countries: countries });
-        });
+            res.status(200).json({ success: true, message: 'Dashboard data retrieved successfully', data: responseData });
+        } finally {
+            connection.release();
+        }
     } catch (err) {
-        return res.status(500).json({ code: 2, message: 'Internal server error' });
+        console.error('Error fetching dashboard data:', err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
-
 
 //Final testing
 app.get('/admin-dash', authenticateToken, async (req, res) => {
