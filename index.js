@@ -2155,7 +2155,8 @@ app.get('/', (req, res) => {
 
   
 
-  app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
+ // Route to get admin dashboard data
+app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
@@ -2165,30 +2166,36 @@ app.get('/', (req, res) => {
             SELECT
                 (SELECT COUNT(*) FROM users) AS total_users_count,
                 (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests_count,
-                (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests_count,
-                v.id AS vendor_id,
-                v.vendor_name,
-                v.address
-            FROM vendors v
-            WHERE v.featured = 1;
+                (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests_count
+            FROM dual
         `;
 
-        // Execute the query
-        const [results] = await db.promise().query(sql);
+        const [countsResults] = await db.promise().query(sql);
 
-        // Separate the counts and vendor data
-        const [counts] = results;
-        const featuredVendors = results.map(row => ({
-            vendor_id: row.vendor_id,
-            vendor_name: row.vendor_name,
-            address: row.address
-        }));
+        if (!countsResults || countsResults.length === 0) {
+            return res.status(500).json(createResponse(2, 'Error fetching counts data'));
+        }
+
+        const featuredVendorsSql = `
+            SELECT
+                id AS vendor_id,
+                vendor_name,
+                address
+            FROM vendors
+            WHERE featured = 1
+        `;
+
+        const [featuredVendorsResults] = await db.promise().query(featuredVendorsSql);
+
+        if (!featuredVendorsResults) {
+            return res.status(500).json(createResponse(2, 'Error fetching featured vendors data'));
+        }
 
         const responseData = {
-            total_users_count: counts[0] ? counts[0].total_users_count : 0,
-            box_requests_count: counts[0] ? counts[0].box_requests_count : 0,
-            approval_requests_count: counts[0] ? counts[0].approval_requests_count : 0,
-            featured_vendors: featuredVendors
+            total_users_count: countsResults[0].total_users_count,
+            box_requests_count: countsResults[0].box_requests_count,
+            approval_requests_count: countsResults[0].approval_requests_count,
+            featured_vendors: featuredVendorsResults
         };
 
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
