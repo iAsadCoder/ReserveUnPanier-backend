@@ -63,12 +63,20 @@ db.connect(err => {
 
 
 // Standard response format
-const createResponse = (code, message, data = null) => ({
-    code,
+// const createResponse = (code, message, data = null) => ({
+//     code,
+//     message,
+//     response: {
+//         data,
+//     },
+// });
+
+
+
+const createResponse = (status, message, data = null) => ({
+    status,
     message,
-    response: {
-        data,
-    },
+    data
 });
 
 
@@ -1314,20 +1322,20 @@ app.post('/admin-login', async (req, res) => {
 
     // Validate input
     if (!username || !password) {
-        return res.status(400).json(createResponse(400, 'Username and password are required'));
+        return res.status(400).json(createResponse(400, 'Username and password are required'))
     }
 
-    const sql = 'SELECT id, username, name, email, phone_number, profile_image, password FROM admins WHERE username = ?';
+    const sql = 'SELECT id, username, name, email, phone_number, profile_image, created_at, updated_at, password FROM admins WHERE username = ?'
 
     // Execute query
     db.query(sql, [username], async (err, results) => {
         if (err) {
             console.error('Database error:', err.message);
-            return res.status(500).json(createResponse(500, 'Internal server error'));
+            return res.status(500).json(createResponse(500, 'Internal server error'))
         }
 
         if (results.length === 0) {
-            return res.status(404).json(createResponse(404, 'Admin not found'));
+            return res.status(404).json(createResponse(404, 'Admin not found'))
         }
 
         // Verify password
@@ -1335,32 +1343,26 @@ app.post('/admin-login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, admin.password);
 
         if (!isMatch) {
-            return res.status(401).json(createResponse(401, 'Invalid password'));
+            return res.status(401).json(createResponse(401, 'Invalid password'))
         }
 
         // Generate token
         const token = generateAdminToken(admin);
 
-        // Construct the JSON response with token and admin details, excluding password
+        // Construct the JSON response with token and admin details directly in data
         const responsePayload = {
+            id: admin.id,
+            username: admin.username,
+            email: admin.email,
+            fullName: admin.name,
             token: token,   // Include token as a string
-            admin: {        // Include admin details as an object, excluding password
-                id: admin.id,
-                username: admin.username,
-                name: admin.name,
-                email: admin.email,
-                phone_number: admin.phone_number,
-                profile_image: admin.profile_image,
-                created_at: admin.created_at,
-                updated_at: admin.updated_at
-            }
+            expiresIn: 3600 // Assuming token is valid for 1 hour
         };
 
         // Send the response
-        res.status(200).json(createResponse(200, 'Login successful', responsePayload));
+        res.status(200).json(createResponse(200, 'Login successful', responsePayload))
     });
 });
-
 // Route to register a new admin
 app.post('/admin-register', async (req, res) => {
     const {
