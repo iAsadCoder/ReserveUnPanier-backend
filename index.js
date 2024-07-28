@@ -2304,7 +2304,7 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
         };
 
         // Send the response
-        res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
+        res.status(200).json(createResponse(200, 'Dashboard data retrieved successfully', responseData));
     } catch (err) {
         console.error('Error fetching dashboard data:', {
             message: err.message,
