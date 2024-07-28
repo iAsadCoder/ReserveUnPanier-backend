@@ -2330,7 +2330,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
             return res.status(500).json(createResponse(2, 'Error fetching vendors data'));
         }
 
-        res.status(200).json(createResponse(1, 'Vendors data retrieved successfully', { vendors: vendorsResults }));
+        res.status(200).json(createResponse(200, 'Vendors data retrieved successfully', { vendors: vendorsResults }));
     } catch (err) {
         console.error('Error fetching vendors data:', {
             message: err.message,
