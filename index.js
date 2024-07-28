@@ -2274,7 +2274,7 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
             SELECT COUNT(*) AS active_orders_count
             FROM orders o
             JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status IN ('approved', 'pending')
+            WHERE o.status IN ('approved', 'pending')
         `;
 
         const [activeOrdersResults] = await db.promise().query(activeOrdersCountSql, [vendorId]);
@@ -2284,7 +2284,7 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
             SELECT COUNT(*) AS completed_orders_count
             FROM orders o
             JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status = 'completed'
+            WHERE  o.status = 'completed'
         `;
 
         const [completedOrdersResults] = await db.promise().query(completedOrdersCountSql, [vendorId]);
