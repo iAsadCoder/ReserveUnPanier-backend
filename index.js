@@ -2313,3 +2313,30 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
+// Route to get all vendors
+app.get('/all-vendors', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    try {
+        // SQL query to fetch all vendors
+        const allVendorsSql = 'SELECT * FROM vendors';
+
+        const [vendorsResults] = await db.promise().query(allVendorsSql);
+
+        if (!vendorsResults) {
+            return res.status(500).json(createResponse(2, 'Error fetching vendors data'));
+        }
+
+        res.status(200).json(createResponse(1, 'Vendors data retrieved successfully', { vendors: vendorsResults }));
+    } catch (err) {
+        console.error('Error fetching vendors data:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
+
