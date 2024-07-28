@@ -2175,13 +2175,68 @@ app.get('/', (req, res) => {
   
 
  // Route to get admin dashboard data
+// app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
+
+//     try {
+//         const sql = `
+//             SELECT
+//                 (SELECT COUNT(*) FROM users) AS total_users_count,
+//                 (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests_count,
+//                 (SELECT COUNT(*) FROM vendors WHERE status = 0) AS approval_requests_count
+//             FROM dual
+//         `;
+
+//         const [countsResults] = await db.promise().query(sql);
+
+//         if (!countsResults || countsResults.length === 0) {
+//             return res.status(500).json(createResponse(2, 'Error fetching counts data'));
+//         }
+
+//         const featuredVendorsSql = 
+//         `
+//             SELECT
+//                 id AS vendor_id,
+//                 vendor_name,
+//                 address
+//             FROM vendors
+//             WHERE featured = 1
+//         `;
+
+//         const [featuredVendorsResults] = await db.promise().query(featuredVendorsSql);
+
+//         if (!featuredVendorsResults) {
+//             return res.status(500).json(createResponse(2, 'Error fetching featured vendors data'));
+//         }
+
+//         const responseData = {
+//             total_users_count: countsResults[0].total_users_count,
+//             box_requests_count: countsResults[0].box_requests_count,
+//             approval_requests_count: countsResults[0].approval_requests_count,
+//             featured_vendors: featuredVendorsResults
+//         };
+
+//         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
+//     } catch (err) {
+//         console.error('Error fetching dashboard data:', {
+//             message: err.message,
+//             stack: err.stack
+//         });
+//         res.status(500).json(createResponse(2, 'Internal server error'));
+//     }
+// });
+
+// Route to get admin dashboard data
 app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
     try {
-        const sql = `
+        // SQL to get total counts for users, box requests, and approval requests
+        const countsSql = `
             SELECT
                 (SELECT COUNT(*) FROM users) AS total_users_count,
                 (SELECT COUNT(*) FROM mystery_boxes WHERE status = 0) AS box_requests_count,
@@ -2189,12 +2244,13 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
             FROM dual
         `;
 
-        const [countsResults] = await db.promise().query(sql);
+        const [countsResults] = await db.promise().query(countsSql);
 
         if (!countsResults || countsResults.length === 0) {
             return res.status(500).json(createResponse(2, 'Error fetching counts data'));
         }
 
+        // SQL to get featured vendors
         const featuredVendorsSql = `
             SELECT
                 id AS vendor_id,
@@ -2210,13 +2266,44 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
             return res.status(500).json(createResponse(2, 'Error fetching featured vendors data'));
         }
 
+        // Get the vendor ID from the authenticated user (assuming req.user contains vendor information)
+        const vendorId = req.user.vendorId;
+
+        // SQL to get active orders count
+        const activeOrdersCountSql = `
+            SELECT COUNT(*) AS active_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status IN ('approved', 'pending')
+        `;
+
+        const [activeOrdersResults] = await db.promise().query(activeOrdersCountSql, [vendorId]);
+
+        // SQL to get completed orders count
+        const completedOrdersCountSql = `
+            SELECT COUNT(*) AS completed_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status = 'completed'
+        `;
+
+        const [completedOrdersResults] = await db.promise().query(completedOrdersCountSql, [vendorId]);
+
+        if (!activeOrdersResults || !completedOrdersResults) {
+            return res.status(500).json(createResponse(2, 'Error fetching orders data'));
+        }
+
+        // Construct response data
         const responseData = {
             total_users_count: countsResults[0].total_users_count,
             box_requests_count: countsResults[0].box_requests_count,
             approval_requests_count: countsResults[0].approval_requests_count,
-            featured_vendors: featuredVendorsResults
+            featured_vendors: featuredVendorsResults,
+            active_orders_count: activeOrdersResults[0].active_orders_count,
+            completed_orders_count: completedOrdersResults[0].completed_orders_count
         };
 
+        // Send the response
         res.status(200).json(createResponse(1, 'Dashboard data retrieved successfully', responseData));
     } catch (err) {
         console.error('Error fetching dashboard data:', {
