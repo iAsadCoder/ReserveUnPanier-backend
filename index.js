@@ -2252,17 +2252,13 @@ app.get('/admin-dashboard-data', authenticateToken, async (req, res) => {
 
         // SQL to get featured vendors
         const featuredVendorsSql = `
-        SELECT
-            v.id AS vendor_id,
-            v.vendor_name,
-            v.address
-        FROM vendors v
-        JOIN orders o ON v.id = o.vendor_id
-        WHERE v.featured = 1
-        AND o.status IN ('approved', 'pending')
-        GROUP BY v.id, v.vendor_name, v.address;
-    `;
-
+            SELECT
+                id AS vendor_id,
+                vendor_name,
+                address
+            FROM vendors
+            WHERE featured = 1
+        `;
 
         const [featuredVendorsResults] = await db.promise().query(featuredVendorsSql);
 
