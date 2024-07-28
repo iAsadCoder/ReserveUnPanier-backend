@@ -2341,3 +2341,35 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
     }
 });
 
+//Route to remove vendro 
+
+app.delete('/vendor/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.id;
+
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
+
+    try {
+        // SQL query to delete the vendor by ID
+        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+
+        const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'Vendor not found'));
+        }
+
+        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+    } catch (err) {
+        console.error('Error deleting vendor:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
