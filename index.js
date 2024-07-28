@@ -2343,7 +2343,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 
 //Route to remove vendro 
 
-app.delete('/vendor/:id', authenticateToken, async (req, res) => {
+app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
