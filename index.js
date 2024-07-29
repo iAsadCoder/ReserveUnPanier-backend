@@ -2613,85 +2613,85 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 
 
 
-app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json(createResponse(4, 'Forbidden'));
-    }
+// app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
 
-    const vendorId = req.params.id;
+//     const vendorId = req.params.id;
 
-    if (!vendorId) {
-        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-    }
+//     if (!vendorId) {
+//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+//     }
 
-    // Check for approved orders
-    const checkApprovedOrdersSql = `
-        SELECT COUNT(*) AS approved_orders_count
-        FROM orders o
-        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-        WHERE mb.vendor_id = ? AND o.status = 'approved'
-    `;
+//     // Check for approved orders
+//     const checkApprovedOrdersSql = `
+//         SELECT COUNT(*) AS approved_orders_count
+//         FROM orders o
+//         JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+//         WHERE mb.vendor_id = ? AND o.status = 'approved'
+//     `;
     
-    db.query(checkApprovedOrdersSql, [vendorId], (err, results) => {
-        if (err) {
-            console.error('Database error:', err.message);
-            return res.status(500).json(createResponse(2, 'Internal server error(1)'));
-        }
+//     db.query(checkApprovedOrdersSql, [vendorId], (err, results) => {
+//         if (err) {
+//             console.error('Database error:', err.message);
+//             return res.status(500).json(createResponse(2, 'Internal server error(1)'));
+//         }
 
-        if (results[0].approved_orders_count > 0) {
-            return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
-        }
+//         if (results[0].approved_orders_count > 0) {
+//             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
+//         }
 
-        // Delete orders with 'pending', 'completed', or 'failed' status
-        const deleteOrdersSql = `
-            DELETE o.*
-            FROM orders o
-            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
-        `;
+//         // Delete orders with 'pending', 'completed', or 'failed' status
+//         const deleteOrdersSql = `
+//             DELETE o.*
+//             FROM orders o
+//             JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+//             WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+//         `;
         
-        db.query(deleteOrdersSql, [vendorId], (err) => {
-            if (err) {
-                console.error('Database error:', err.message);
-                return res.status(500).json(createResponse(2, 'Internal server error(2)'));
-            }
+//         db.query(deleteOrdersSql, [vendorId], (err) => {
+//             if (err) {
+//                 console.error('Database error:', err.message);
+//                 return res.status(500).json(createResponse(2, 'Internal server error(2)'));
+//             }
 
-            // Delete mystery boxes
-            const deleteMysteryBoxesSql = `
-                DELETE FROM mystery_boxes WHERE vendor_id = ?
-            `;
+//             // Delete mystery boxes
+//             const deleteMysteryBoxesSql = `
+//                 DELETE FROM mystery_boxes WHERE vendor_id = ?
+//             `;
             
-            db.query(deleteMysteryBoxesSql, [vendorId], (err, deleteBoxesResult) => {
-                if (err) {
-                    console.error('Database error:', err.message);
-                    return res.status(500).json(createResponse(2, 'Internal server error(3)'));
-                }
+//             db.query(deleteMysteryBoxesSql, [vendorId], (err, deleteBoxesResult) => {
+//                 if (err) {
+//                     console.error('Database error:', err.message);
+//                     return res.status(500).json(createResponse(2, 'Internal server error(3)'));
+//                 }
 
-                // if (deleteBoxesResult.affectedRows === 0) {
-                //     return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor but vendor deleted sucessfully'));
-                // }
+//                 // if (deleteBoxesResult.affectedRows === 0) {
+//                 //     return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor but vendor deleted sucessfully'));
+//                 // }
 
-                // Delete vendor
-                const deleteVendorSql = `
-                    DELETE FROM vendors WHERE id = ?
-                `;
+//                 // Delete vendor
+//                 const deleteVendorSql = `
+//                     DELETE FROM vendors WHERE id = ?
+//                 `;
                 
-                db.query(deleteVendorSql, [vendorId], (err, deleteVendorResult) => {
-                    if (err) {
-                        console.error('Database error:', err.message);
-                        return res.status(500).json(createResponse(2, 'Internal server error(4v)'));
-                    }
+//                 db.query(deleteVendorSql, [vendorId], (err, deleteVendorResult) => {
+//                     if (err) {
+//                         console.error('Database error:', err.message);
+//                         return res.status(500).json(createResponse(2, 'Internal server error(4v)'));
+//                     }
 
-                    if (deleteVendorResult.affectedRows === 0) {
-                        return res.status(404).json(createResponse(1, 'Vendor not found'));
-                    }
+//                     if (deleteVendorResult.affectedRows === 0) {
+//                         return res.status(404).json(createResponse(1, 'Vendor not found'));
+//                     }
 
-                    res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-                });
-            });
-        });
-    });
-});
+//                     res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+//                 });
+//             });
+//         });
+//     });
+// });
 
 
 
@@ -2750,3 +2750,91 @@ app.get('/orders', authenticateToken, (req, res) => {
 //         res.status(500).json(createResponse(2, 'Internal server error'));
 //     }
 // });
+
+app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.id;
+
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
+
+    // Check for approved orders
+    const checkApprovedOrdersSql = `
+        SELECT COUNT(*) AS approved_orders_count
+        FROM orders o
+        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+        WHERE mb.vendor_id = ? AND o.status = 'approved'
+    `;
+    
+    db.query(checkApprovedOrdersSql, [vendorId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json(createResponse(2, 'Internal server error(1)'));
+        }
+
+        if (results[0].approved_orders_count > 0) {
+            return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
+        }
+
+        // Delete transactions first
+        const deleteTransactionsSql = `
+            DELETE FROM transactions WHERE vendor_id = ?
+        `;
+        
+        db.query(deleteTransactionsSql, [vendorId], (err) => {
+            if (err) {
+                console.error('Database error:', err.message);
+                return res.status(500).json(createResponse(2, 'Internal server error(2)'));
+            }
+
+            // Delete orders with 'pending', 'completed', or 'failed' status
+            const deleteOrdersSql = `
+                DELETE o.*
+                FROM orders o
+                JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+                WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+            `;
+            
+            db.query(deleteOrdersSql, [vendorId], (err) => {
+                if (err) {
+                    console.error('Database error:', err.message);
+                    return res.status(500).json(createResponse(2, 'Internal server error(3)'));
+                }
+
+                // Delete mystery boxes
+                const deleteMysteryBoxesSql = `
+                    DELETE FROM mystery_boxes WHERE vendor_id = ?
+                `;
+                
+                db.query(deleteMysteryBoxesSql, [vendorId], (err, deleteBoxesResult) => {
+                    if (err) {
+                        console.error('Database error:', err.message);
+                        return res.status(500).json(createResponse(2, 'Internal server error(4)'));
+                    }
+
+                    // Delete vendor
+                    const deleteVendorSql = `
+                        DELETE FROM vendors WHERE id = ?
+                    `;
+                    
+                    db.query(deleteVendorSql, [vendorId], (err, deleteVendorResult) => {
+                        if (err) {
+                            console.error('Database error:', err.message);
+                            return res.status(500).json(createResponse(2, 'Internal server error(5)'));
+                        }
+
+                        if (deleteVendorResult.affectedRows === 0) {
+                            return res.status(404).json(createResponse(1, 'Vendor not found'));
+                        }
+
+                        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+                    });
+                });
+            });
+        });
+    });
+});
