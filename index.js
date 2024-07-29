@@ -2738,6 +2738,7 @@ app.get('/orders', authenticateToken, (req, res) => {
     try {
         // Start a transaction
         await db.query('START TRANSACTION');
+        console.log('Transaction started');
 
         // Check if there are any approved orders associated with the vendor
         const [approvedOrdersResult] = await db.query(`
@@ -2747,8 +2748,11 @@ app.get('/orders', authenticateToken, (req, res) => {
             WHERE mb.vendor_id = ? AND o.status = 'approved'
         `, [vendorId]);
 
+        console.log('Approved orders result:', approvedOrdersResult);
+
         if (approvedOrdersResult[0].approved_orders_count > 0) {
             await db.query('ROLLBACK');
+            console.log('Rolled back transaction');
             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
         }
 
@@ -2757,22 +2761,29 @@ app.get('/orders', authenticateToken, (req, res) => {
             DELETE FROM mystery_boxes WHERE vendor_id = ?
         `, [vendorId]);
 
+        console.log('Deleted mystery boxes');
+
         // Delete the vendor
         const [deleteVendorResult] = await db.query(`
             DELETE FROM vendors WHERE id = ?
         `, [vendorId]);
 
+        console.log('Delete vendor result:', deleteVendorResult);
+
         if (deleteVendorResult.affectedRows === 0) {
             await db.query('ROLLBACK');
+            console.log('Rolled back transaction');
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
         // Commit the transaction
         await db.query('COMMIT');
+        console.log('Transaction committed');
 
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
         await db.query('ROLLBACK');
+        console.log('Rolled back transaction due to error');
         console.error('Error occurred:', {
             message: err.message,
             stack: err.stack
