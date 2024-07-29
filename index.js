@@ -2569,6 +2569,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
+
 app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
@@ -2597,7 +2598,6 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         const approvedOrdersCount = checkOrdersResult[0].approved_orders_count;
 
         if (approvedOrdersCount > 0) {
-            // Rollback the transaction if there are approved orders
             await connection.rollback();
             return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
@@ -2616,7 +2616,6 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         const [deleteMysteryBoxesResult] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
         if (deleteMysteryBoxesResult.affectedRows === 0) {
-            // Rollback the transaction if no mystery boxes were found
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
         }
@@ -2626,16 +2625,13 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         const [deleteVendorResult] = await connection.query(deleteVendorSql, [vendorId]);
 
         if (deleteVendorResult.affectedRows === 0) {
-            // Rollback the transaction if the vendor was not found
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
-        // Commit the transaction
         await connection.commit();
         res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
     } catch (err) {
-        // Rollback the transaction in case of an error
         await connection.rollback();
         console.error('Error deleting vendor and mystery boxes:', {
             message: err.message,
@@ -2643,8 +2639,6 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         });
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
-        // Release the connection back to the pool
         connection.release();
     }
 });
-
