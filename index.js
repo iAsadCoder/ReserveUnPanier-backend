@@ -2580,64 +2580,21 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
-    const connection = await db.getConnection();
-
     try {
-        await connection.beginTransaction();
+        // Call the stored procedure
+        const [result] = await db.query('CALL delete_vendor_and_boxes(?)', [vendorId]);
 
-        // Check for approved orders
-        const [approvedOrdersResult] = await connection.query(`
-            SELECT COUNT(*) AS approved_orders_count
-            FROM orders o
-            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status = 'approved'
-        `, [vendorId]);
-
-        const approvedOrdersCount = approvedOrdersResult[0].approved_orders_count;
-
-        if (approvedOrdersCount > 0) {
-            await connection.rollback();
-            return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
+        // Check if the procedure raised an error
+        if (result.length === 0) {
+            return res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
+        } else {
+            return res.status(400).json(createResponse(1, result[0]['MESSAGE_TEXT']));
         }
-
-        // Delete orders with 'pending', 'completed', or 'failed' status
-        await connection.query(`
-            DELETE o.*
-            FROM orders o
-            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
-        `, [vendorId]);
-
-        // Delete mystery boxes
-        const [deleteBoxesResult] = await connection.query(`
-            DELETE FROM mystery_boxes WHERE vendor_id = ?
-        `, [vendorId]);
-
-        if (deleteBoxesResult.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
-        }
-
-        // Delete vendor
-        const [deleteVendorResult] = await connection.query(`
-            DELETE FROM vendors WHERE id = ?
-        `, [vendorId]);
-
-        if (deleteVendorResult.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json(createResponse(1, 'Vendor not found'));
-        }
-
-        await connection.commit();
-        res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
     } catch (err) {
-        await connection.rollback();
-        console.error('Error deleting vendor and mystery boxes:', {
+        console.error('Error calling stored procedure:', {
             message: err.message,
             stack: err.stack
         });
         res.status(500).json(createResponse(2, 'Internal server error'));
-    } finally {
-        connection.release();
     }
 });
