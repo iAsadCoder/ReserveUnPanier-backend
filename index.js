@@ -2540,7 +2540,7 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
-
+//aknsknsdknaksndksnak
 // Route to delete mystery boxes based on vendor ID
 app.delete('/delete-mystery-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
