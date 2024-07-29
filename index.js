@@ -2432,37 +2432,44 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
     const connection = await db.getConnection();
 
     try {
+        console.log('Starting transaction');
+
         // Start a transaction
         await connection.beginTransaction();
 
         // First, delete related rows in mystery_boxes
         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+        console.log('Executing deleteMysteryBoxesSql query');
         await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
         // Then, delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+        console.log('Executing deleteVendorSql query');
         const [result] = await connection.query(deleteVendorSql, [vendorId]);
 
         if (result.affectedRows === 0) {
             // Rollback the transaction if the vendor was not found
+            console.log('Vendor not found, rolling back');
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
         // Commit the transaction
+        console.log('Committing transaction');
         await connection.commit();
 
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
         // Rollback the transaction in case of an error
-        await connection.rollback();
-        console.error('Error deleting vendor:', {
+        console.error('Error occurred, rolling back transaction:', {
             message: err.message,
             stack: err.stack
         });
+        await connection.rollback();
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
         // Release the connection back to the pool
+        console.log('Releasing connection');
         connection.release();
     }
 });
