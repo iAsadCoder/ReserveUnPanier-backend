@@ -2580,12 +2580,9 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
-    let connection;
-
     try {
-        console.log('Starting transaction');
-        connection = await db.getConnection();
-        await connection.beginTransaction();
+        // Get a connection from the pool
+        const connection = await pool.getConnection();
 
         // Check for approved orders
         const [approvedOrdersResult] = await connection.query(`
@@ -2596,8 +2593,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
         `, [vendorId]);
 
         if (approvedOrdersResult[0].approved_orders_count > 0) {
-            console.log('Orders in progress, cannot delete vendor');
-            await connection.rollback();
+            await connection.release();
             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
         }
 
@@ -2615,8 +2611,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
         `, [vendorId]);
 
         if (deleteBoxesResult.affectedRows === 0) {
-            console.log('No mystery boxes found for this vendor, rolling back');
-            await connection.rollback();
+            await connection.release();
             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
         }
 
@@ -2626,24 +2621,18 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
         `, [vendorId]);
 
         if (deleteVendorResult.affectedRows === 0) {
-            console.log('Vendor not found, rolling back');
-            await connection.rollback();
+            await connection.release();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
-        await connection.commit();
+        // Release the connection
+        await connection.release();
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
-        console.error('Error occurred, rolling back transaction:', {
+        console.error('Error occurred:', {
             message: err.message,
             stack: err.stack
         });
-        if (connection) await connection.rollback();
         res.status(500).json(createResponse(2, 'Internal server error'));
-    } finally {
-        if (connection) {
-            console.log('Releasing connection');
-            connection.release();
-        }
     }
 });
