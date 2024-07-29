@@ -2373,6 +2373,42 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
+
+
+//route to delete mystery box 
+
+app.delete('/delete-mystery-boxes/:vendorId', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.vendorId;
+
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
+
+    try {
+        // SQL query to delete all mystery boxes associated with the vendor ID
+        const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+        const [result] = await db.promise().query(deleteMysteryBoxesSql, [vendorId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+        }
+
+        res.status(200).json(createResponse(200, 'Mystery boxes deleted successfully'));
+    } catch (err) {
+        console.error('Error deleting mystery boxes:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
+
+
+
 //new vendor delete and also mystery box with it!
 
 // app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
@@ -2475,64 +2511,3 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
 // });
 
 
-app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json(createResponse(4, 'Forbidden'));
-    }
-
-    const vendorId = req.params.vendorId;
-
-    if (!vendorId) {
-        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-    }
-
-    const connection = await db.promise().getConnection();
-
-    try {
-        console.log('Starting transaction');
-
-        // Start a transaction
-        await connection.beginTransaction();
-
-        // Delete mystery boxes first
-        const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-        console.log('Executing query:', deleteMysteryBoxesSql);
-        const [mysteryBoxesResult] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
-
-        if (mysteryBoxesResult.affectedRows > 0) {
-            // If mystery boxes were deleted, proceed to delete the vendor
-            const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-            console.log('Executing query:', deleteVendorSql);
-            const [vendorResult] = await connection.query(deleteVendorSql, [vendorId]);
-
-            if (vendorResult.affectedRows > 0) {
-                // If vendor was successfully deleted, commit the transaction
-                await connection.commit();
-                console.log('Transaction committed');
-                return res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
-            } else {
-                // If vendor deletion failed, rollback the transaction
-                await connection.rollback();
-                console.log('Vendor not found, rolling back');
-                return res.status(404).json(createResponse(1, 'Vendor not found'));
-            }
-        } else {
-            // If no mystery boxes were found, rollback the transaction
-            await connection.rollback();
-            console.log('No mystery boxes found for this vendor, rolling back');
-            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
-        }
-    } catch (err) {
-        // Rollback the transaction in case of error
-        console.error('Error deleting vendor and mystery boxes:', {
-            message: err.message,
-            stack: err.stack
-        });
-        await connection.rollback();
-        res.status(500).json(createResponse(2, 'Internal server error'));
-    } finally {
-        // Release the connection back to the pool
-        console.log('Releasing connection');
-        connection.release();
-    }
-});
