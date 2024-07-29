@@ -2569,13 +2569,12 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-
 app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
-    const { vendorId } = req.params;
+    const vendorId = req.params.vendorId;
 
     if (!vendorId) {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
@@ -2586,61 +2585,45 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
     try {
         await connection.beginTransaction();
 
-        // Function to check if there are any 'approved' orders
-        const checkApprovedOrders = async () => {
-            const checkOrdersSql = `
-                SELECT COUNT(*) AS approved_orders_count
-                FROM orders o
-                JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-                WHERE mb.vendor_id = ? AND o.status = 'approved'
-            `;
-            const [result] = await connection.query(checkOrdersSql, [vendorId]);
-            return result[0].approved_orders_count;
-        };
+        // Check for approved orders
+        const [approvedOrdersResult] = await connection.query(`
+            SELECT COUNT(*) AS approved_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status = 'approved'
+        `, [vendorId]);
 
-        // Function to delete orders with 'pending', 'completed', or 'failed' status
-        const deleteOrders = async () => {
-            const deleteOrdersSql = `
-                DELETE o.*
-                FROM orders o
-                JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-                WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
-            `;
-            await connection.query(deleteOrdersSql, [vendorId]);
-        };
-
-        // Function to delete mystery boxes
-        const deleteMysteryBoxes = async () => {
-            const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-            const [result] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
-            return result.affectedRows;
-        };
-
-        // Function to delete vendor
-        const deleteVendor = async () => {
-            const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-            const [result] = await connection.query(deleteVendorSql, [vendorId]);
-            return result.affectedRows;
-        };
-
-        const approvedOrdersCount = await checkApprovedOrders();
+        const approvedOrdersCount = approvedOrdersResult[0].approved_orders_count;
 
         if (approvedOrdersCount > 0) {
             await connection.rollback();
             return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
 
-        await deleteOrders();
-        const affectedRows = await deleteMysteryBoxes();
+        // Delete orders with 'pending', 'completed', or 'failed' status
+        await connection.query(`
+            DELETE o.*
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+        `, [vendorId]);
 
-        if (affectedRows === 0) {
+        // Delete mystery boxes
+        const [deleteBoxesResult] = await connection.query(`
+            DELETE FROM mystery_boxes WHERE vendor_id = ?
+        `, [vendorId]);
+
+        if (deleteBoxesResult.affectedRows === 0) {
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
         }
 
-        const vendorDeleted = await deleteVendor();
+        // Delete vendor
+        const [deleteVendorResult] = await connection.query(`
+            DELETE FROM vendors WHERE id = ?
+        `, [vendorId]);
 
-        if (vendorDeleted === 0) {
+        if (deleteVendorResult.affectedRows === 0) {
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
