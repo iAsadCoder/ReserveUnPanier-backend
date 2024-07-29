@@ -2551,7 +2551,7 @@ app.delete('/delete-mystery-box/:vendorId', authenticateToken, async (req, res) 
 
     try {
         // SQL query to delete mystery boxes for the given vendor ID
-        const deleteMysteryBoxSql = 'DELETE FROM mystery_box WHERE vendor_id = ?';
+        const deleteMysteryBoxSql = 'DELETE FROM mystery_boxs WHERE vendor_id = ?';
         
         const [deleteResult] = await db.promise().query(deleteMysteryBoxSql, [vendorId]);
 
