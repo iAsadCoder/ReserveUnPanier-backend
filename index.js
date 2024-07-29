@@ -2594,7 +2594,6 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
             WHERE mb.vendor_id = ? AND o.status = 'approved'
         `;
         const [checkOrdersResult] = await connection.query(checkOrdersSql, [vendorId]);
-
         const approvedOrdersCount = checkOrdersResult[0].approved_orders_count;
 
         if (approvedOrdersCount > 0) {
@@ -2602,7 +2601,7 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
             return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
 
-        // SQL query to delete all orders associated with the vendor's mystery boxes where status is 'pending', 'completed', or 'failed'
+        // Delete all orders associated with the vendor's mystery boxes where status is 'pending', 'completed', or 'failed'
         const deleteOrdersSql = `
             DELETE o.*
             FROM orders o
@@ -2611,7 +2610,7 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         `;
         await connection.query(deleteOrdersSql, [vendorId]);
 
-        // SQL query to delete all mystery boxes associated with the vendor ID
+        // Delete all mystery boxes associated with the vendor ID
         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
         const [deleteMysteryBoxesResult] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
@@ -2620,7 +2619,7 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
         }
 
-        // SQL query to delete the vendor
+        // Delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
         const [deleteVendorResult] = await connection.query(deleteVendorSql, [vendorId]);
 
