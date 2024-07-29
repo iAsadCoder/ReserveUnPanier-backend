@@ -2586,44 +2586,61 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
     try {
         await connection.beginTransaction();
 
-        // Check if there are any orders with status 'approved' for the given vendor's mystery boxes
-        const checkOrdersSql = `
-            SELECT COUNT(*) AS approved_orders_count
-            FROM orders o
-            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status = 'approved'
-        `;
-        const [checkOrdersResult] = await connection.query(checkOrdersSql, [vendorId]);
-        const approvedOrdersCount = checkOrdersResult[0].approved_orders_count;
+        // Function to check if there are any 'approved' orders
+        const checkApprovedOrders = async () => {
+            const checkOrdersSql = `
+                SELECT COUNT(*) AS approved_orders_count
+                FROM orders o
+                JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+                WHERE mb.vendor_id = ? AND o.status = 'approved'
+            `;
+            const [result] = await connection.query(checkOrdersSql, [vendorId]);
+            return result[0].approved_orders_count;
+        };
+
+        // Function to delete orders with 'pending', 'completed', or 'failed' status
+        const deleteOrders = async () => {
+            const deleteOrdersSql = `
+                DELETE o.*
+                FROM orders o
+                JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+                WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+            `;
+            await connection.query(deleteOrdersSql, [vendorId]);
+        };
+
+        // Function to delete mystery boxes
+        const deleteMysteryBoxes = async () => {
+            const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+            const [result] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
+            return result.affectedRows;
+        };
+
+        // Function to delete vendor
+        const deleteVendor = async () => {
+            const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+            const [result] = await connection.query(deleteVendorSql, [vendorId]);
+            return result.affectedRows;
+        };
+
+        const approvedOrdersCount = await checkApprovedOrders();
 
         if (approvedOrdersCount > 0) {
             await connection.rollback();
             return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
 
-        // Delete all orders associated with the vendor's mystery boxes where status is 'pending', 'completed', or 'failed'
-        const deleteOrdersSql = `
-            DELETE o.*
-            FROM orders o
-            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
-            WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
-        `;
-        await connection.query(deleteOrdersSql, [vendorId]);
+        await deleteOrders();
+        const affectedRows = await deleteMysteryBoxes();
 
-        // Delete all mystery boxes associated with the vendor ID
-        const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-        const [deleteMysteryBoxesResult] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
-
-        if (deleteMysteryBoxesResult.affectedRows === 0) {
+        if (affectedRows === 0) {
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
         }
 
-        // Delete the vendor
-        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        const [deleteVendorResult] = await connection.query(deleteVendorSql, [vendorId]);
+        const vendorDeleted = await deleteVendor();
 
-        if (deleteVendorResult.affectedRows === 0) {
+        if (vendorDeleted === 0) {
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
