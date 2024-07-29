@@ -2569,7 +2569,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
+app.get('/check-approved-orders/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
@@ -2581,17 +2581,22 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
     }
 
     try {
-        // Call the stored procedure
-        const [result] = await db.query('CALL delete_vendor_and_boxes(?)', [vendorId]);
+        const [result] = await db.query(`
+            SELECT COUNT(*) AS approved_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status = 'approved'
+        `, [vendorId]);
 
-        // Check if the procedure raised an error
-        if (result.length === 0) {
-            return res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
-        } else {
-            return res.status(400).json(createResponse(1, result[0]['MESSAGE_TEXT']));
+        const approvedOrdersCount = result[0].approved_orders_count;
+
+        if (approvedOrdersCount > 0) {
+            return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
+
+        res.status(200).json(createResponse(200, 'No approved orders found.'));
     } catch (err) {
-        console.error('Error calling stored procedure:', {
+        console.error('Error checking approved orders:', {
             message: err.message,
             stack: err.stack
         });
