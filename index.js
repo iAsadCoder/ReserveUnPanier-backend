@@ -2569,65 +2569,82 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
+app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
-    const vendorId = req.params.id;
+    const { vendorId } = req.params;
 
     if (!vendorId) {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
-    let connection;
+    const connection = await db.getConnection();
 
     try {
-        console.log('Starting transaction');
-        connection = await db.getConnection();
         await connection.beginTransaction();
 
-        const checkApprovedOrdersSql = 'SELECT COUNT(*) AS count FROM orders WHERE vendor_id = ? AND status = "approved"';
-        console.log('Executing checkApprovedOrdersSql query');
-        const [approvedOrdersResult] = await connection.query(checkApprovedOrdersSql, [vendorId]);
+        // Check if there are any orders with status 'approved' for the given vendor's mystery boxes
+        const checkOrdersSql = `
+            SELECT COUNT(*) AS approved_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status = 'approved'
+        `;
+        const [checkOrdersResult] = await connection.query(checkOrdersSql, [vendorId]);
 
-        if (approvedOrdersResult[0].count > 0) {
-            console.log('Orders in progress, cannot delete vendor');
+        const approvedOrdersCount = checkOrdersResult[0].approved_orders_count;
+
+        if (approvedOrdersCount > 0) {
+            // Rollback the transaction if there are approved orders
             await connection.rollback();
-            return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
+            return res.status(400).json(createResponse(1, 'Cannot delete vendor. Orders are in progress.'));
         }
 
-        const deleteOrdersSql = 'DELETE FROM orders WHERE vendor_id = ? AND status IN ("pending", "completed", "failed")';
-        console.log('Executing deleteOrdersSql query');
+        // SQL query to delete all orders associated with the vendor's mystery boxes where status is 'pending', 'completed', or 'failed'
+        const deleteOrdersSql = `
+            DELETE o.*
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+        `;
         await connection.query(deleteOrdersSql, [vendorId]);
 
+        // SQL query to delete all mystery boxes associated with the vendor ID
         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-        console.log('Executing deleteMysteryBoxesSql query');
-        await connection.query(deleteMysteryBoxesSql, [vendorId]);
+        const [deleteMysteryBoxesResult] = await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
+        if (deleteMysteryBoxesResult.affectedRows === 0) {
+            // Rollback the transaction if no mystery boxes were found
+            await connection.rollback();
+            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+        }
+
+        // SQL query to delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        console.log('Executing deleteVendorSql query');
-        const [result] = await connection.query(deleteVendorSql, [vendorId]);
+        const [deleteVendorResult] = await connection.query(deleteVendorSql, [vendorId]);
 
-        if (result.affectedRows === 0) {
-            console.log('Vendor not found, rolling back');
+        if (deleteVendorResult.affectedRows === 0) {
+            // Rollback the transaction if the vendor was not found
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
+        // Commit the transaction
         await connection.commit();
-        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+        res.status(200).json(createResponse(200, 'Vendor and associated mystery boxes deleted successfully'));
     } catch (err) {
-        console.error('Error occurred, rolling back transaction:', {
+        // Rollback the transaction in case of an error
+        await connection.rollback();
+        console.error('Error deleting vendor and mystery boxes:', {
             message: err.message,
             stack: err.stack
         });
-        if (connection) await connection.rollback();
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
-        if (connection) {
-            console.log('Releasing connection');
-            connection.release();
-        }
+        // Release the connection back to the pool
+        connection.release();
     }
 });
+
