@@ -2724,26 +2724,56 @@ app.get('/orders', authenticateToken, (req, res) => {
 
 
  // Route to delete a vendor based on ID
-app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
     const vendorId = req.params.id;
 
-    try {
-        // SQL query to delete the vendor
-        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        
-        const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
 
-        if (deleteResult.affectedRows === 0) {
+    try {
+        // Start a transaction
+        await db.query('START TRANSACTION');
+
+        // Check if there are any approved orders associated with the vendor
+        const [approvedOrdersResult] = await db.query(`
+            SELECT COUNT(*) AS approved_orders_count
+            FROM orders o
+            JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+            WHERE mb.vendor_id = ? AND o.status = 'approved'
+        `, [vendorId]);
+
+        if (approvedOrdersResult[0].approved_orders_count > 0) {
+            await db.query('ROLLBACK');
+            return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
+        }
+
+        // Delete mystery boxes associated with the vendor
+        await db.query(`
+            DELETE FROM mystery_boxes WHERE vendor_id = ?
+        `, [vendorId]);
+
+        // Delete the vendor
+        const [deleteVendorResult] = await db.query(`
+            DELETE FROM vendors WHERE id = ?
+        `, [vendorId]);
+
+        if (deleteVendorResult.affectedRows === 0) {
+            await db.query('ROLLBACK');
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
+        // Commit the transaction
+        await db.query('COMMIT');
+
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
-        console.error('Error deleting vendor:', {
+        await db.query('ROLLBACK');
+        console.error('Error occurred:', {
             message: err.message,
             stack: err.stack
         });
