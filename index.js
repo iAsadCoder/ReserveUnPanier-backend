@@ -2341,7 +2341,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
     }
 });
 
-//Route to remove vendro 
+// //Route to remove vendro 
 
 // app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
 //     if (req.user.role !== 'admin') {
@@ -2569,56 +2569,151 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
+// app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
 
-app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+//     const vendorId = req.params.id;
+
+//     if (!vendorId) {
+//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+//     }
+
+//     try {
+//         // Get a connection from the pool
+//         const connection = await pool.getConnection();
+
+//         // Check for approved orders
+//         const [approvedOrdersResult] = await connection.query(`
+//             SELECT COUNT(*) AS approved_orders_count
+//             FROM orders o
+//             JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+//             WHERE mb.vendor_id = ? AND o.status = 'approved'
+//         `, [vendorId]);
+
+//         if (approvedOrdersResult[0].approved_orders_count > 0) {
+//             await connection.release();
+//             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
+//         }
+
+//         // Delete orders with 'pending', 'completed', or 'failed' status
+//         await connection.query(`
+//             DELETE o.*
+//             FROM orders o
+//             JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+//             WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+//         `, [vendorId]);
+
+//         // Delete mystery boxes
+//         const [deleteBoxesResult] = await connection.query(`
+//             DELETE FROM mystery_boxes WHERE vendor_id = ?
+//         `, [vendorId]);
+
+//         if (deleteBoxesResult.affectedRows === 0) {
+//             await connection.release();
+//             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+//         }
+
+//         // Delete vendor
+//         const [deleteVendorResult] = await connection.query(`
+//             DELETE FROM vendors WHERE id = ?
+//         `, [vendorId]);
+
+//         if (deleteVendorResult.affectedRows === 0) {
+//             await connection.release();
+//             return res.status(404).json(createResponse(1, 'Vendor not found'));
+//         }
+
+//         // Release the connection
+//         await connection.release();
+//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+//     } catch (err) {
+//         console.error('Error occurred:', {
+//             message: err.message,
+//             stack: err.stack
+//         });
+//         res.status(500).json(createResponse(2, 'Internal server error'));
+//     }
+// });
+
+app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
-    const vendorId = req.params.id;
+    const vendorId = req.params.vendorId;
 
     if (!vendorId) {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
+    const connection = await pool.getConnection();
+
     try {
-        // Check if vendor exists in vendors table
-        const checkVendorSql = 'SELECT id FROM vendors WHERE id = ?';
-        const [vendor] = await db.promise().query(checkVendorSql, [vendorId]);
+        await connection.beginTransaction();
 
-        if (vendor.length === 0) {
+        // Check if vendor has mystery boxes
+        const [mysteryBoxesResult] = await connection.query(`
+            SELECT id
+            FROM mystery_boxes
+            WHERE vendor_id = ?
+        `, [vendorId]);
+
+        if (mysteryBoxesResult.length === 0) {
+            await connection.release();
+            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+        }
+
+        const mysteryBoxIds = mysteryBoxesResult.map(box => box.id);
+
+        // Check for orders with 'approved' status
+        const [approvedOrdersResult] = await connection.query(`
+            SELECT COUNT(*) AS approved_orders_count
+            FROM orders
+            WHERE mystery_box_id IN (?) AND status = 'approved'
+        `, [mysteryBoxIds]);
+
+        if (approvedOrdersResult[0].approved_orders_count > 0) {
+            await connection.rollback();
+            await connection.release();
+            return res.status(400).json(createResponse(5, 'Cannot delete vendor. Orders are in progress.'));
+        }
+
+        // Delete orders with 'pending', 'completed', or 'failed' status
+        await connection.query(`
+            DELETE FROM orders
+            WHERE mystery_box_id IN (?) AND status IN ('pending', 'completed', 'failed')
+        `, [mysteryBoxIds]);
+
+        // Delete mystery boxes
+        await connection.query(`
+            DELETE FROM mystery_boxes
+            WHERE vendor_id = ?
+        `, [vendorId]);
+
+        // Delete vendor
+        const [deleteVendorResult] = await connection.query(`
+            DELETE FROM vendors
+            WHERE id = ?
+        `, [vendorId]);
+
+        if (deleteVendorResult.affectedRows === 0) {
+            await connection.rollback();
+            await connection.release();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
-        // Check if vendor_id exists in mystery_box table
-        const checkMysteryBoxSql = 'SELECT id FROM mystery_box WHERE vendor_id = ?';
-        const [mysteryBoxes] = await db.promise().query(checkMysteryBoxSql, [vendorId]);
-
-        if (mysteryBoxes.length > 0) {
-            // Delete entries in orders table that are linked to mystery_box IDs (excluding 'approved' status)
-            const mysteryBoxIds = mysteryBoxes.map(box => box.id);
-            const deleteOrdersSql = 'DELETE FROM orders WHERE mystery_box_id IN (?) AND status != ?';
-            await db.promise().query(deleteOrdersSql, [mysteryBoxIds, 'approved']);
-
-            // Delete entries in mystery_box table
-            const deleteMysteryBoxSql = 'DELETE FROM mystery_box WHERE vendor_id = ?';
-            await db.promise().query(deleteMysteryBoxSql, [vendorId]);
-        }
-
-        // Delete vendor entry
-        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json(createResponse(1, 'Vendor not found'));
-        }
-
-        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+        await connection.commit();
+        res.status(200).json(createResponse(200, 'Vendor and associated records deleted successfully'));
     } catch (err) {
-        console.error('Error deleting vendor:', {
+        await connection.rollback();
+        console.error('Error occurred:', {
             message: err.message,
             stack: err.stack
         });
         res.status(500).json(createResponse(2, 'Internal server error'));
+    } finally {
+        connection.release();
     }
 });
