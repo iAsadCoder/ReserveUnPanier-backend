@@ -2514,32 +2514,32 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 
 
 // // Route to delete a vendor based on ID
-// app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
+app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
 
-//     const vendorId = req.params.id;
+    const vendorId = req.params.id;
 
-//     try {
-//         // SQL query to delete the vendor
-//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+    try {
+        // SQL query to delete the vendor
+        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
         
-//         const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
+        const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
 
-//         if (deleteResult.affectedRows === 0) {
-//             return res.status(404).json(createResponse(1, 'Vendor not found'));
-//         }
+        if (deleteResult.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'Vendor not found'));
+        }
 
-//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-//     } catch (err) {
-//         console.error('Error deleting vendor:', {
-//             message: err.message,
-//             stack: err.stack
-//         });
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     }
-// });
+        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+    } catch (err) {
+        console.error('Error deleting vendor:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
 
 // // Route to delete mystery boxes based on vendor ID
 // app.delete('/delete-mystery-box/:vendorId', authenticateToken, async (req, res) => {
@@ -2708,9 +2708,10 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
                         return res.status(500).json(createResponse(2, 'Internal server error(4v)'));
                     }
 
-                    if (deleteVendorResult.affectedRows === 0) {
+                    if (deleteVendorResult.affectedRows === 0)
+                     {
                         return res.status(404).json(createResponse(1, 'Vendor not found'));
-                    }
+                     }
 
                     res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
                 });
@@ -2744,5 +2745,40 @@ app.get('/orders', authenticateToken, (req, res) => {
         }
 
         res.status(200).json(createResponse(200, 'Orders retrieved successfully', results));
+    });
+});
+
+// Route to delete orders with specific statuses
+app.delete('/on-going-orders/:vendorId', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.vendorId;
+
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
+
+    // SQL query to delete orders with specific statuses
+    const deleteOrdersSql = `
+        DELETE o.*
+        FROM orders o
+        JOIN mystery_boxes mb ON o.mystery_box_id = mb.id
+        WHERE mb.vendor_id = ? AND o.status IN ('pending', 'completed', 'failed')
+    `;
+
+    db.query(deleteOrdersSql, [vendorId], (err, result) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json(createResponse(2, 'Internal server error'));
+        }
+
+        // Check if any rows were deleted
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'No orders found for this vendor with the specified statuses'));
+        }
+
+        res.status(200).json(createResponse(200, 'On-going orders deleted successfully'));
     });
 });
