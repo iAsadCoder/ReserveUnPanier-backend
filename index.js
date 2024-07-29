@@ -2661,7 +2661,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
     db.query(checkApprovedOrdersSql, [vendorId], (err, results) => {
         if (err) {
             console.error('Database error:', err.message);
-            return res.status(500).json(createResponse(2, 'Internal server error'));
+            return res.status(500).json(createResponse(2, 'Internal server error(1)'));
         }
 
         if (results[0].approved_orders_count > 0) {
@@ -2679,7 +2679,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
         db.query(deleteOrdersSql, [vendorId], (err) => {
             if (err) {
                 console.error('Database error:', err.message);
-                return res.status(500).json(createResponse(2, 'Internal server error'));
+                return res.status(500).json(createResponse(2, 'Internal server error(2)'));
             }
 
             // Delete mystery boxes
@@ -2690,7 +2690,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
             db.query(deleteMysteryBoxesSql, [vendorId], (err, deleteBoxesResult) => {
                 if (err) {
                     console.error('Database error:', err.message);
-                    return res.status(500).json(createResponse(2, 'Internal server error'));
+                    return res.status(500).json(createResponse(2, 'Internal server error(3)'));
                 }
 
                 // if (deleteBoxesResult.affectedRows === 0) {
@@ -2705,7 +2705,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
                 db.query(deleteVendorSql, [vendorId], (err, deleteVendorResult) => {
                     if (err) {
                         console.error('Database error:', err.message);
-                        return res.status(500).json(createResponse(2, 'Internal server error'));
+                        return res.status(500).json(createResponse(2, 'Internal server error(4v)'));
                     }
 
                     if (deleteVendorResult.affectedRows === 0) {
