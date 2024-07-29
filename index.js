@@ -2569,16 +2569,13 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-app.post('/delete-vendor-box', authenticateToken, async (req, res) => {
-    // Check if the user has admin role
+app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
-    // Get the vendor ID from the request body
-    const { vendorId } = req.body;
+    const vendorId = req.params.id;
 
-    // Validate the vendor ID
     if (!vendorId) {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
@@ -2590,7 +2587,6 @@ app.post('/delete-vendor-box', authenticateToken, async (req, res) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // Check for orders with status "approved"
         const checkApprovedOrdersSql = 'SELECT COUNT(*) AS count FROM orders WHERE vendor_id = ? AND status = "approved"';
         console.log('Executing checkApprovedOrdersSql query');
         const [approvedOrdersResult] = await connection.query(checkApprovedOrdersSql, [vendorId]);
@@ -2601,17 +2597,14 @@ app.post('/delete-vendor-box', authenticateToken, async (req, res) => {
             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
         }
 
-        // Delete orders with status "pending", "completed", or "failed"
         const deleteOrdersSql = 'DELETE FROM orders WHERE vendor_id = ? AND status IN ("pending", "completed", "failed")';
         console.log('Executing deleteOrdersSql query');
         await connection.query(deleteOrdersSql, [vendorId]);
 
-        // Delete related rows in mystery_boxes
         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
         console.log('Executing deleteMysteryBoxesSql query');
         await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
-        // Then, delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
         console.log('Executing deleteVendorSql query');
         const [result] = await connection.query(deleteVendorSql, [vendorId]);
@@ -2622,11 +2615,9 @@ app.post('/delete-vendor-box', authenticateToken, async (req, res) => {
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
-        // Commit the transaction
         await connection.commit();
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
-        // Rollback the transaction in case of an error
         console.error('Error occurred, rolling back transaction:', {
             message: err.message,
             stack: err.stack
@@ -2634,7 +2625,6 @@ app.post('/delete-vendor-box', authenticateToken, async (req, res) => {
         if (connection) await connection.rollback();
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
-        // Release the connection back to the pool
         if (connection) {
             console.log('Releasing connection');
             connection.release();
