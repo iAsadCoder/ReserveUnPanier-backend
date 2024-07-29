@@ -2580,15 +2580,13 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
-    const connection = await db.getConnection();
+    let connection;
 
     try {
         console.log('Starting transaction');
-
-        // Start a transaction
+        connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // Check for orders with status "approved"
         const checkApprovedOrdersSql = 'SELECT COUNT(*) AS count FROM orders WHERE vendor_id = ? AND status = "approved"';
         console.log('Executing checkApprovedOrdersSql query');
         const [approvedOrdersResult] = await connection.query(checkApprovedOrdersSql, [vendorId]);
@@ -2599,46 +2597,37 @@ app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
             return res.status(400).json(createResponse(5, 'Cannot delete vendor, orders in progress'));
         }
 
-        // Delete orders with status "pending", "completed", or "failed"
         const deleteOrdersSql = 'DELETE FROM orders WHERE vendor_id = ? AND status IN ("pending", "completed", "failed")';
         console.log('Executing deleteOrdersSql query');
         await connection.query(deleteOrdersSql, [vendorId]);
 
-        // Delete related rows in mystery_boxes
         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
         console.log('Executing deleteMysteryBoxesSql query');
         await connection.query(deleteMysteryBoxesSql, [vendorId]);
 
-        // Then, delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
         console.log('Executing deleteVendorSql query');
         const [result] = await connection.query(deleteVendorSql, [vendorId]);
 
         if (result.affectedRows === 0) {
-            // Rollback the transaction if the vendor was not found
             console.log('Vendor not found, rolling back');
             await connection.rollback();
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
-        // Commit the transaction
-        console.log('Committing transaction');
         await connection.commit();
-
         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
     } catch (err) {
-        // Rollback the transaction in case of an error
         console.error('Error occurred, rolling back transaction:', {
             message: err.message,
             stack: err.stack
         });
-        await connection.rollback();
+        if (connection) await connection.rollback();
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
-        // Release the connection back to the pool
-        console.log('Releasing connection');
-        connection.release();
+        if (connection) {
+            console.log('Releasing connection');
+            connection.release();
+        }
     }
 });
-
-//aaaa
