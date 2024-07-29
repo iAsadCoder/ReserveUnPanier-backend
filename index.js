@@ -2718,3 +2718,31 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
         });
     });
 });
+
+
+
+
+
+
+
+app.get('/orders', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    // SQL query to get all data from the orders table
+    const sql = 'SELECT * FROM orders';
+
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Database error:', err.message);
+            return res.status(500).json(createResponse(2, 'Internal server error'));
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json(createResponse(1, 'No orders found'));
+        }
+
+        res.status(200).json(createResponse(200, 'Orders retrieved successfully', results));
+    });
+});
