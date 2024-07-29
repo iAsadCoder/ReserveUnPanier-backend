@@ -2693,9 +2693,9 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
                     return res.status(500).json(createResponse(2, 'Internal server error'));
                 }
 
-                if (deleteBoxesResult.affectedRows === 0) {
-                    return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
-                }
+                // if (deleteBoxesResult.affectedRows === 0) {
+                //     return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor but vendor deleted sucessfully'));
+                // }
 
                 // Delete vendor
                 const deleteVendorSql = `
