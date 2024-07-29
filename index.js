@@ -2343,36 +2343,36 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 
 //Route to remove vendro 
 
-app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json(createResponse(4, 'Forbidden'));
-    }
+// app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
 
-    const vendorId = req.params.id;
+//     const vendorId = req.params.id;
 
-    if (!vendorId) {
-        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-    }
+//     if (!vendorId) {
+//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+//     }
 
-    try {
-        // SQL query to delete the vendor by ID
-        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+//     try {
+//         // SQL query to delete the vendor by ID
+//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
 
-        const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
+//         const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json(createResponse(1, 'Vendor not found'));
-        }
+//         if (result.affectedRows === 0) {
+//             return res.status(404).json(createResponse(1, 'Vendor not found'));
+//         }
 
-        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-    } catch (err) {
-        console.error('Error deleting vendor:', {
-            message: err.message,
-            stack: err.stack
-        });
-        res.status(500).json(createResponse(2, 'Internal server error'));
-    }
-});
+//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+//     } catch (err) {
+//         console.error('Error deleting vendor:', {
+//             message: err.message,
+//             stack: err.stack
+//         });
+//         res.status(500).json(createResponse(2, 'Internal server error'));
+//     }
+// });
 
 
 // //route to delete mystery box 
@@ -2569,3 +2569,56 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
 //     }
 // });
 
+
+app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.id;
+
+    if (!vendorId) {
+        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+    }
+
+    try {
+        // Check if vendor exists in vendors table
+        const checkVendorSql = 'SELECT id FROM vendors WHERE id = ?';
+        const [vendor] = await db.promise().query(checkVendorSql, [vendorId]);
+
+        if (vendor.length === 0) {
+            return res.status(404).json(createResponse(1, 'Vendor not found'));
+        }
+
+        // Check if vendor_id exists in mystery_box table
+        const checkMysteryBoxSql = 'SELECT id FROM mystery_box WHERE vendor_id = ?';
+        const [mysteryBoxes] = await db.promise().query(checkMysteryBoxSql, [vendorId]);
+
+        if (mysteryBoxes.length > 0) {
+            // Delete entries in orders table that are linked to mystery_box IDs (excluding 'approved' status)
+            const mysteryBoxIds = mysteryBoxes.map(box => box.id);
+            const deleteOrdersSql = 'DELETE FROM orders WHERE mystery_box_id IN (?) AND status != ?';
+            await db.promise().query(deleteOrdersSql, [mysteryBoxIds, 'approved']);
+
+            // Delete entries in mystery_box table
+            const deleteMysteryBoxSql = 'DELETE FROM mystery_box WHERE vendor_id = ?';
+            await db.promise().query(deleteMysteryBoxSql, [vendorId]);
+        }
+
+        // Delete vendor entry
+        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+        const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'Vendor not found'));
+        }
+
+        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+    } catch (err) {
+        console.error('Error deleting vendor:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
