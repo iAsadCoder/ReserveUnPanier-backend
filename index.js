@@ -2341,8 +2341,179 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
     }
 });
 
-//Route to remove vendro 
+// //Route to remove vendro 
 
+// app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
+
+//     const vendorId = req.params.id;
+
+//     if (!vendorId) {
+//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+//     }
+
+//     try {
+//         // SQL query to delete the vendor by ID
+//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+
+//         const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
+
+//         if (result.affectedRows === 0) {
+//             return res.status(404).json(createResponse(1, 'Vendor not found'));
+//         }
+
+//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+//     } catch (err) {
+//         console.error('Error deleting vendor:', {
+//             message: err.message,
+//             stack: err.stack
+//         });
+//         res.status(500).json(createResponse(2, 'Internal server error'));
+//     }
+// });
+
+
+// //route to delete mystery box 
+
+// app.delete('/delete-mystery-boxes/:vendorId', authenticateToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json(createResponse(4, 'Forbidden'));
+//     }
+
+//     const vendorId = req.params.vendorId;
+
+//     if (!vendorId) {
+//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+//     }
+
+//     try {
+//         // SQL query to delete all mystery boxes associated with the vendor ID
+//         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+//         const [result] = await db.promise().query(deleteMysteryBoxesSql, [vendorId]);
+
+//         if (result.affectedRows === 0) {
+//             return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+//         }
+
+//         res.status(200).json(createResponse(200, 'Mystery boxes deleted successfully'));
+//     } catch (err) {
+//         console.error('Error deleting mystery boxes:', {
+//             message: err.message,
+//             stack: err.stack
+//         });
+//         res.status(500).json(createResponse(2, 'Internal server error'));
+//     }
+// });
+
+
+
+// //new vendor delete and also mystery box with it!
+
+// // app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
+// //     if (req.user.role !== 'admin') {
+// //         return res.status(403).json(createResponse(4, 'Forbidden'));
+// //     }
+
+// //     const vendorId = req.params.id;
+
+// //     if (!vendorId) {
+// //         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+// //     }
+
+// //     const connection = await db.promise().getConnection();
+
+// //     try {
+// //         await connection.beginTransaction();
+
+// //         // First, delete related rows in mystery_boxes
+// //         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+// //         await connection.query(deleteMysteryBoxesSql, [vendorId]);
+
+// //         // Then, delete the vendor
+// //         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+// //         const [result] = await connection.query(deleteVendorSql, [vendorId]);
+
+// //         if (result.affectedRows === 0) {
+// //             return res.status(404).json(createResponse(1, 'Vendor not found'));
+// //         }
+
+// //         await connection.commit();
+
+// //         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+// //     } catch (err) {
+// //         await connection.rollback();
+// //         console.error('Error deleting vendor:', {
+// //             message: err.message,
+// //             stack: err.stack
+// //         });
+// //         res.status(500).json(createResponse(2, 'Internal server error'));
+// //     } finally {
+// //         connection.release();
+// //     }
+// // });
+
+// // app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
+// //     if (req.user.role !== 'admin') {
+// //         return res.status(403).json(createResponse(4, 'Forbidden'));
+// //     }
+
+// //     const vendorId = req.params.id;
+
+// //     if (!vendorId) {
+// //         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
+// //     }
+
+// //     const connection = await db.getConnection();
+
+// //     try {
+// //         console.log('Starting transaction');
+
+// //         // Start a transaction
+// //         await connection.beginTransaction();
+
+// //         // First, delete related rows in mystery_boxes
+// //         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
+// //         console.log('Executing deleteMysteryBoxesSql query');
+// //         await connection.query(deleteMysteryBoxesSql, [vendorId]);
+
+// //         // Then, delete the vendor
+// //         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+// //         console.log('Executing deleteVendorSql query');
+// //         const [result] = await connection.query(deleteVendorSql, [vendorId]);
+
+// //         if (result.affectedRows === 0) {
+// //             // Rollback the transaction if the vendor was not found
+// //             console.log('Vendor not found, rolling back');
+// //             await connection.rollback();
+// //             return res.status(404).json(createResponse(1, 'Vendor not found'));
+// //         }
+
+// //         // Commit the transaction
+// //         console.log('Committing transaction');
+// //         await connection.commit();
+
+// //         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+// //     } catch (err) {
+// //         // Rollback the transaction in case of an error
+// //         console.error('Error occurred, rolling back transaction:', {
+// //             message: err.message,
+// //             stack: err.stack
+// //         });
+// //         await connection.rollback();
+// //         res.status(500).json(createResponse(2, 'Internal server error'));
+// //     } finally {
+// //         // Release the connection back to the pool
+// //         console.log('Releasing connection');
+// //         connection.release();
+// //     }
+// // });
+
+
+
+
+// Route to delete a vendor based on ID
 app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
@@ -2350,17 +2521,13 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
 
     const vendorId = req.params.id;
 
-    if (!vendorId) {
-        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-    }
-
     try {
-        // SQL query to delete the vendor by ID
+        // SQL query to delete the vendor
         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+        
+        const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
 
-        const [result] = await db.promise().query(deleteVendorSql, [vendorId]);
-
-        if (result.affectedRows === 0) {
+        if (deleteResult.affectedRows === 0) {
             return res.status(404).json(createResponse(1, 'Vendor not found'));
         }
 
@@ -2374,27 +2541,22 @@ app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
     }
 });
 
-
-//route to delete mystery box 
-
-app.delete('/delete-mystery-boxes/:vendorId', authenticateToken, async (req, res) => {
+// Route to delete mystery boxes based on vendor ID
+app.delete('/delete-mystery-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
 
     const vendorId = req.params.vendorId;
 
-    if (!vendorId) {
-        return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-    }
-
     try {
-        // SQL query to delete all mystery boxes associated with the vendor ID
-        const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-        const [result] = await db.promise().query(deleteMysteryBoxesSql, [vendorId]);
+        // SQL query to delete mystery boxes for the given vendor ID
+        const deleteMysteryBoxSql = 'DELETE FROM mystery_box WHERE vendor_id = ?';
+        
+        const [deleteResult] = await db.promise().query(deleteMysteryBoxSql, [vendorId]);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+        if (deleteResult.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'No mystery boxes found for the specified vendor'));
         }
 
         res.status(200).json(createResponse(200, 'Mystery boxes deleted successfully'));
@@ -2406,108 +2568,3 @@ app.delete('/delete-mystery-boxes/:vendorId', authenticateToken, async (req, res
         res.status(500).json(createResponse(2, 'Internal server error'));
     }
 });
-
-
-
-//new vendor delete and also mystery box with it!
-
-// app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
-
-//     const vendorId = req.params.id;
-
-//     if (!vendorId) {
-//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-//     }
-
-//     const connection = await db.promise().getConnection();
-
-//     try {
-//         await connection.beginTransaction();
-
-//         // First, delete related rows in mystery_boxes
-//         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-//         await connection.query(deleteMysteryBoxesSql, [vendorId]);
-
-//         // Then, delete the vendor
-//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-//         const [result] = await connection.query(deleteVendorSql, [vendorId]);
-
-//         if (result.affectedRows === 0) {
-//             return res.status(404).json(createResponse(1, 'Vendor not found'));
-//         }
-
-//         await connection.commit();
-
-//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-//     } catch (err) {
-//         await connection.rollback();
-//         console.error('Error deleting vendor:', {
-//             message: err.message,
-//             stack: err.stack
-//         });
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     } finally {
-//         connection.release();
-//     }
-// });
-
-// app.delete('/delete-vendor-box/:id', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
-
-//     const vendorId = req.params.id;
-
-//     if (!vendorId) {
-//         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
-//     }
-
-//     const connection = await db.getConnection();
-
-//     try {
-//         console.log('Starting transaction');
-
-//         // Start a transaction
-//         await connection.beginTransaction();
-
-//         // First, delete related rows in mystery_boxes
-//         const deleteMysteryBoxesSql = 'DELETE FROM mystery_boxes WHERE vendor_id = ?';
-//         console.log('Executing deleteMysteryBoxesSql query');
-//         await connection.query(deleteMysteryBoxesSql, [vendorId]);
-
-//         // Then, delete the vendor
-//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-//         console.log('Executing deleteVendorSql query');
-//         const [result] = await connection.query(deleteVendorSql, [vendorId]);
-
-//         if (result.affectedRows === 0) {
-//             // Rollback the transaction if the vendor was not found
-//             console.log('Vendor not found, rolling back');
-//             await connection.rollback();
-//             return res.status(404).json(createResponse(1, 'Vendor not found'));
-//         }
-
-//         // Commit the transaction
-//         console.log('Committing transaction');
-//         await connection.commit();
-
-//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-//     } catch (err) {
-//         // Rollback the transaction in case of an error
-//         console.error('Error occurred, rolling back transaction:', {
-//             message: err.message,
-//             stack: err.stack
-//         });
-//         await connection.rollback();
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     } finally {
-//         // Release the connection back to the pool
-//         console.log('Releasing connection');
-//         connection.release();
-//     }
-// });
-
-
