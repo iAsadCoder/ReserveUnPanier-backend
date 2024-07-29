@@ -2648,9 +2648,11 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         return res.status(400).json(createResponse(3, 'Vendor ID is required'));
     }
 
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
+        // Get a connection from the pool
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
         // Check if vendor has mystery boxes
@@ -2707,13 +2709,17 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         await connection.commit();
         res.status(200).json(createResponse(200, 'Vendor and associated records deleted successfully'));
     } catch (err) {
-        await connection.rollback();
+        if (connection) {
+            await connection.rollback();
+        }
         console.error('Error occurred:', {
             message: err.message,
             stack: err.stack
         });
         res.status(500).json(createResponse(2, 'Internal server error'));
     } finally {
-        connection.release();
+        if (connection) {
+            connection.release();
+        }
     }
 });
