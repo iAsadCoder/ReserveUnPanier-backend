@@ -2637,7 +2637,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
+app.delete('/delete-vendor/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
@@ -2655,7 +2655,7 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        // Check if the vendor has any mystery boxes
+        // Check for associated mystery boxes
         const [mysteryBoxesResult] = await connection.query(`
             SELECT id
             FROM mystery_boxes
@@ -2663,13 +2663,19 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
         `, [vendorId]);
 
         if (mysteryBoxesResult.length === 0) {
-            await connection.rollback();
-            return res.status(404).json(createResponse(1, 'No mystery boxes found for this vendor'));
+            // No mystery boxes found for the vendor
+            await connection.query(`
+                DELETE FROM vendors
+                WHERE id = ?
+            `, [vendorId]);
+            
+            await connection.commit();
+            return res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
         }
 
         const mysteryBoxIds = mysteryBoxesResult.map(box => box.id);
 
-        // Check for approved orders
+        // Check if any of the mystery boxes have orders with status 'approved'
         const [approvedOrdersResult] = await connection.query(`
             SELECT COUNT(*) AS approved_orders_count
             FROM orders
@@ -2678,14 +2684,8 @@ app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) =
 
         if (approvedOrdersResult[0].approved_orders_count > 0) {
             await connection.rollback();
-            return res.status(400).json(createResponse(5, 'Cannot delete vendor. Orders are in progress.'));
+            return res.status(400).json(createResponse(5, 'Cannot delete vendor. Some mystery boxes have approved orders.'));
         }
-
-        // Delete orders with status 'pending', 'completed', or 'failed'
-        await connection.query(`
-            DELETE FROM orders
-            WHERE mystery_box_id IN (?) AND status IN ('pending', 'completed', 'failed')
-        `, [mysteryBoxIds]);
 
         // Delete mystery boxes
         await connection.query(`
