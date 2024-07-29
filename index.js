@@ -2637,7 +2637,9 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 //     }
 // });
 
-app.delete('/delete-vendor/:vendorId', authenticateToken, async (req, res) => {
+
+
+app.delete('/delete-vendor-box/:vendorId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json(createResponse(4, 'Forbidden'));
     }
@@ -2708,7 +2710,11 @@ app.delete('/delete-vendor/:vendorId', authenticateToken, async (req, res) => {
         res.status(200).json(createResponse(200, 'Vendor and associated records deleted successfully'));
     } catch (err) {
         if (connection) {
-            await connection.rollback();
+            try {
+                await connection.rollback();
+            } catch (rollbackErr) {
+                console.error('Rollback error:', rollbackErr.message);
+            }
         }
         console.error('Error occurred:', {
             message: err.message,
