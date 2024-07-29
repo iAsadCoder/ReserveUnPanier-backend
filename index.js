@@ -2513,33 +2513,7 @@ app.get('/all-vendors', authenticateToken, async (req, res) => {
 
 
 
-// // Route to delete a vendor based on ID
-// app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
 
-//     const vendorId = req.params.id;
-
-//     try {
-//         // SQL query to delete the vendor
-//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        
-//         const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
-
-//         if (deleteResult.affectedRows === 0) {
-//             return res.status(404).json(createResponse(1, 'Vendor not found'));
-//         }
-
-//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-//     } catch (err) {
-//         console.error('Error deleting vendor:', {
-//             message: err.message,
-//             stack: err.stack
-//         });
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     }
-// });
 
 // // Route to delete mystery boxes based on vendor ID
 // app.delete('/delete-mystery-box/:vendorId', authenticateToken, async (req, res) => {
@@ -2747,3 +2721,32 @@ app.get('/orders', authenticateToken, (req, res) => {
     });
 });
 
+
+
+ // Route to delete a vendor based on ID
+app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json(createResponse(4, 'Forbidden'));
+    }
+
+    const vendorId = req.params.id;
+
+    try {
+        // SQL query to delete the vendor
+        const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
+        
+        const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
+
+        if (deleteResult.affectedRows === 0) {
+            return res.status(404).json(createResponse(1, 'Vendor not found'));
+        }
+
+        res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
+    } catch (err) {
+        console.error('Error deleting vendor:', {
+            message: err.message,
+            stack: err.stack
+        });
+        res.status(500).json(createResponse(2, 'Internal server error'));
+    }
+});
