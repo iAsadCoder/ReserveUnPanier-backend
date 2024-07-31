@@ -2723,33 +2723,6 @@ app.get('/orders', authenticateToken, (req, res) => {
 
 
 
-//  // Route to delete a vendor based on ID
-// app.delete('/delete-vendor/:id', authenticateToken, async (req, res) => {
-//     if (req.user.role !== 'admin') {
-//         return res.status(403).json(createResponse(4, 'Forbidden'));
-//     }
-
-//     const vendorId = req.params.id;
-
-//     try {
-//         // SQL query to delete the vendor
-//         const deleteVendorSql = 'DELETE FROM vendors WHERE id = ?';
-        
-//         const [deleteResult] = await db.promise().query(deleteVendorSql, [vendorId]);
-
-//         if (deleteResult.affectedRows === 0) {
-//             return res.status(404).json(createResponse(1, 'Vendor not found'));
-//         }
-
-//         res.status(200).json(createResponse(200, 'Vendor deleted successfully'));
-//     } catch (err) {
-//         console.error('Error deleting vendor:', {
-//             message: err.message,
-//             stack: err.stack
-//         });
-//         res.status(500).json(createResponse(2, 'Internal server error'));
-//     }
-// });
 
 app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
     if (req.user.role !== 'admin') {
@@ -2788,7 +2761,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
         db.query(deleteTransactionsSql, [vendorId], (err) => {
             if (err) {
                 console.error('Database error:', err.message);
-                return res.status(500).json(createResponse(2, 'Internal server error(2)'));
+                return res.status(500).json(createResponse(2, 'Internal server error(2t)'));
             }
 
             // Delete orders with 'pending', 'completed', or 'failed' status
@@ -2813,7 +2786,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
                 db.query(deleteMysteryBoxesSql, [vendorId], (err, deleteBoxesResult) => {
                     if (err) {
                         console.error('Database error:', err.message);
-                        return res.status(500).json(createResponse(2, 'Internal server error(4)'));
+                        return res.status(500).json(createResponse(2, 'Internal server error(4m)'));
                     }
 
                     // Delete vendor
@@ -2824,7 +2797,7 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
                     db.query(deleteVendorSql, [vendorId], (err, deleteVendorResult) => {
                         if (err) {
                             console.error('Database error:', err.message);
-                            return res.status(500).json(createResponse(2, 'Internal server error(5)'));
+                            return res.status(500).json(createResponse(2, 'Internal server error(5v)'));
                         }
 
                         if (deleteVendorResult.affectedRows === 0) {
@@ -2838,3 +2811,6 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
         });
     });
 });
+
+
+   
