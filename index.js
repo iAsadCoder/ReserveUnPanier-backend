@@ -1914,6 +1914,100 @@ app.delete('/delete-featured-vendor/:id', authenticateToken, (req, res) => {
 
 // order placement  ========================
 // Route to Place a New Order (Customer)
+// app.post('/place-order', authenticateToken, async (req, res) => {
+//     const { customer_id, mystery_box_id, quantity, total_price, description } = req.body;
+
+//     // Validate input
+//     if (!customer_id || !mystery_box_id || !quantity || !total_price || !description) {
+//         return res.status(400).json(createResponse(2, 'All fields are required'));
+//     }
+
+//     // Check if there is enough stock
+//     const stockCheckSql = `
+//         SELECT restock_quantity
+//         FROM vendor_restocks
+//         WHERE mystery_box_id = ?
+//     `;
+//     db.query(stockCheckSql, [mystery_box_id], (err, results) => {
+//         if (err) {
+//             return res.status(500).json(createResponse(2, err.message));
+//         }
+
+//         if (results.length === 0 || results[0].restock_quantity < quantity) {
+//             return res.status(422).json(createResponse(2, 'Not enough stock available'));
+//         }
+
+//         // Insert order
+//         const orderSql = `
+//             INSERT INTO orders (customer_id, mystery_box_id, quantity, total_price, description, status, created_at, updated_at)
+//             VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+//         `;
+//         const orderValues = [customer_id, mystery_box_id, quantity, total_price, description, 'pending'];
+
+//         db.query(orderSql, orderValues, (err, result) => {
+//             if (err) {
+//                 return res.status(500).json(createResponse(2, err.message));
+//             }
+
+//             if (!result.insertId) {
+//                 return res.status(422).json(createResponse(2, 'Order could not be placed'));
+//             }
+
+//             // Update stock
+//             const updateStockSql = `
+//                 UPDATE vendor_restocks
+//                 SET restock_quantity = restock_quantity - ?
+//                 WHERE mystery_box_id = ?
+//             `;
+//             db.query(updateStockSql, [quantity, mystery_box_id], (err) => {
+//                 if (err) {
+//                     return res.status(500).json(createResponse(2, err.message));
+//                 }
+
+//                 // Insert transaction
+//                 const transactionSql = `
+//                     INSERT INTO transactions (vendor_id, amount, transaction_type, created_at)
+//                     SELECT mb.vendor_id, ?, 'credit', NOW()
+//                     FROM mystery_boxes mb
+//                     WHERE mb.id = ?
+//                 `;
+//                 const transactionValues = [total_price, mystery_box_id];
+
+//                 db.query(transactionSql, transactionValues, (err) => {
+//                     if (err) {
+//                         return res.status(500).json(createResponse(2, err.message));
+//                     }
+
+//                     // Insert sale
+//                     const saleSql = `
+//                         INSERT INTO sales (mystery_box_id, user_id, quantity_sold, sold_at)
+//                         VALUES (?, ?, ?, NOW())
+//                     `;
+//                     const saleValues = [mystery_box_id, customer_id, quantity];
+
+//                     db.query(saleSql, saleValues, (err) => {
+//                         if (err) {
+//                             return res.status(500).json(createResponse(2, err.message));
+//                         }
+
+//                         // Fetch the newly created order
+//                         const selectSql = 'SELECT * FROM orders WHERE id = ?';
+//                         db.query(selectSql, [result.insertId], (err, results) => {
+//                             if (err) {
+//                                 return res.status(500).json(createResponse(2, err.message));
+//                             }
+
+//                             res.status(200).json(createResponse(1, 'Order has been placed successfully', results[0]));
+//                         });
+//                     });
+//                 });
+//             });
+//         });
+//     });
+// });
+
+
+// Route to Place and Approve a New Order (Customer)
 app.post('/place-order', authenticateToken, async (req, res) => {
     const { customer_id, mystery_box_id, quantity, total_price, description } = req.body;
 
@@ -1942,7 +2036,7 @@ app.post('/place-order', authenticateToken, async (req, res) => {
             INSERT INTO orders (customer_id, mystery_box_id, quantity, total_price, description, status, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
         `;
-        const orderValues = [customer_id, mystery_box_id, quantity, total_price, description, 'pending'];
+        const orderValues = [customer_id, mystery_box_id, quantity, total_price, description, 'approved'];
 
         db.query(orderSql, orderValues, (err, result) => {
             if (err) {
@@ -1997,7 +2091,7 @@ app.post('/place-order', authenticateToken, async (req, res) => {
                                 return res.status(500).json(createResponse(2, err.message));
                             }
 
-                            res.status(200).json(createResponse(1, 'Order has been placed successfully', results[0]));
+                            res.status(200).json(createResponse(1, 'Order has been placed and approved successfully', results[0]));
                         });
                     });
                 });
@@ -2005,8 +2099,6 @@ app.post('/place-order', authenticateToken, async (req, res) => {
         });
     });
 });
-
-
 
 
 // Route to Approve an Order (Vendor)
@@ -2812,5 +2904,3 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
     });
 });
 
-
-   
