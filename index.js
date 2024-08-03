@@ -2904,3 +2904,4 @@ app.delete('/delete-vendor-box/:id', authenticateToken, (req, res) => {
     });
 });
 
+//alsmalk
