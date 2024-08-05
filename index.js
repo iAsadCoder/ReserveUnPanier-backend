@@ -14,9 +14,8 @@ const PORT = process.env.PORT || 3306;
 // Middleware to parse JSON
 app.use(express.json());
 
-
 // MySQL connection
-const db = mysql.createPool({
+const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
