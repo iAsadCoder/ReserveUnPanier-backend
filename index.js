@@ -14,8 +14,9 @@ const PORT = process.env.PORT || 3306;
 // Middleware to parse JSON
 app.use(express.json());
 
+
 // MySQL connection
-const db = mysql.createConnection({
+const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
@@ -360,45 +361,7 @@ app.put('/editUser/:id', upload.single('profile_image'), async (req, res) => {
         return res.status(500).json({ code: 2, message: 'Internal server error' });
     }
 });
-// User edit route with image upload
-// app.put('/editUser/:id', upload.single('profile_image'), async (req, res) => {
-//     const userId = req.params.id;
-//     const { name, email, phone_number, country_id, username, password } = req.body;
-//     const profileImage = req.file ? req.file.filename : null; // Get the uploaded file name
 
-//     // Validate required fields
-//     if (!name || !email || !phone_number || !country_id || !username || !password) {
-//         return res.status(400).json({ code: 2, message: 'All fields except profile_image are required' });
-//     }
-
-//     // Hash password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     const sql = 'UPDATE users SET name = ?, email = ?, phone_number = ?, profile_image = ?, country_id = ?, username = ?, password = ?, updated_at = NOW() WHERE id = ?';
-
-//     db.query(sql, [name, email, phone_number, profileImage, country_id, username, hashedPassword, userId], (err, result) => {
-//         if (err) {
-//             console.error('Database error:', err.message);
-//             return res.status(500).json({ code: 2, message: 'Internal server error' });
-//         }
-
-//         if (result.affectedRows === 0) {
-//             return res.status(404).json({ code: 3, message: 'User not found' });
-//         }
-
-//         console.log('Updated user details:', {
-//             id: userId,
-//             username,
-//             name,
-//             email,
-//             phone_number,
-//             profile_image: profileImage,
-//             country_id
-//         });
-
-//         res.status(200).json({ code: 1, message: 'User updated successfully' });
-//     });
-// });
 
 // Route to get user by ID
 app.get('/getUserById/:id', (req, res) => {
