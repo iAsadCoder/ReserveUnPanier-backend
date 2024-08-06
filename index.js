@@ -9,7 +9,7 @@ const app = express();
 const multer = require('multer');
 const path = require('path');
 
-const PORT = process.env.PORT || 3306;
+const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON
 app.use(express.json());
