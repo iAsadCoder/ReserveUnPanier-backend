@@ -1,0 +1,14 @@
+/* src/styles/SignIn.css */
+.sign-in {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f8f9fa;
+  }
+  
+  .sign-in h1 {
+    margin-bottom: 1em;
+  }
+  
