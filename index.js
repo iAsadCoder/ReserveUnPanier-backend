@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const multer = require('multer');
 const path = require('path');
+const cors = require('cors');
 
 const PORT = process.env.PORT || 3000;
 
@@ -19,8 +20,16 @@ const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+    database: process.env.DB_DATABASE, 
 });
+
+// CORS Configuration
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'], // Add any other headers you use
+}));
 
 // Multer setup for file uploads
 const storage = multer.diskStorage({
